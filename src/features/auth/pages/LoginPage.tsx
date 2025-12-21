@@ -23,10 +23,7 @@ export function LoginPage() {
     setIsLoading(true);
     setError('');
     
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const success = login(formData.email, formData.password);
+    const success = await login(formData.email, formData.password);
     
     if (success) {
       navigate(from, { replace: true });

@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Lock, User, Phone, Dumbbell, Check } from 'lucide-react';
+import { useAuthStore } from '../../../stores/authStore';
 
 export function SignupPage() {
   const navigate = useNavigate();
+  const signup = useAuthStore((state) => state.signup);
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState('');
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
@@ -26,12 +29,23 @@ export function SignupPage() {
     }
     
     setIsLoading(true);
+    setError('');
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    const success = await signup({
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      email: formData.email,
+      phone: formData.phone || undefined,
+      password: formData.password,
+    });
+    
+    if (success) {
+      navigate('/dashboard');
+    } else {
+      setError('Failed to create account. Email may already be in use.');
+    }
     
     setIsLoading(false);
-    navigate('/login');
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -112,6 +126,13 @@ export function SignupPage() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">
+              {/* Error Message */}
+              {error && (
+                <div className="p-4 bg-danger-50 border border-danger-500 rounded-xl text-danger-600 text-sm animate-shake">
+                  {error}
+                </div>
+              )}
+
               {currentStep === 1 ? (
                 <>
                   {/* Name Fields */}
