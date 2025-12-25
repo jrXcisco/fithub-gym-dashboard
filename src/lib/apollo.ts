@@ -2,7 +2,7 @@ import { ApolloClient, InMemoryCache, createHttpLink } from '@apollo/client';
 import { setContext } from '@apollo/client/link/context';
 
 const httpLink = createHttpLink({
-  uri: import.meta.env.VITE_API_URL || 'https://fithub-backend-q6l5.onrender.com/graphql',
+  uri: import.meta.env.VITE_API_URL || 'http://localhost:4000/graphql',
 });
 
 const authLink = setContext((_, { headers }) => {
