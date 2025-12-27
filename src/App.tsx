@@ -1,4 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { ApolloProvider } from '@apollo/client';
+import { apolloClient } from './lib/apollo';
 import { DashboardLayout } from './components/layout';
 import { DashboardPage } from './features/dashboard';
 import { MembersListPage, MemberDetailPage } from './features/members';
@@ -11,6 +13,7 @@ import { ProtectedRoute } from './components/auth/ProtectedRoute';
 
 function App() {
   return (
+    <ApolloProvider client={apolloClient}>
     <BrowserRouter>
       <Routes>
         {/* Public Routes */}
@@ -34,6 +37,7 @@ function App() {
         </Route>
       </Routes>
     </BrowserRouter>
+    </ApolloProvider>
   );
 }
 

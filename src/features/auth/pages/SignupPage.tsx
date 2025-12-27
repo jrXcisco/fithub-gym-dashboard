@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Mail, Lock, User, Phone, Dumbbell, Check } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User, Phone, Dumbbell, Check, Building2 } from 'lucide-react';
 import { useAuthStore } from '../../../stores/authStore';
 
 export function SignupPage() {
@@ -19,6 +19,8 @@ export function SignupPage() {
     password: '',
     confirmPassword: '',
     agreeToTerms: false,
+    isGymAdmin: true,
+    gymName: '',
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -37,6 +39,8 @@ export function SignupPage() {
       email: formData.email,
       phone: formData.phone || undefined,
       password: formData.password,
+      role: formData.isGymAdmin ? 'admin' : 'user',
+      gymName: formData.isGymAdmin ? formData.gymName : undefined,
     });
     
     if (success) {
@@ -212,6 +216,27 @@ export function SignupPage() {
                         placeholder="+1 (555) 000-0000"
                       />
                     </div>
+                  </div>
+
+                  {/* Gym Name Field */}
+                  <div className="animate-slide-in-up animation-delay-500">
+                    <label htmlFor="gymName" className="block text-sm font-medium text-gray-700 mb-2">
+                      Gym Name <span className="text-primary-600">*</span>
+                    </label>
+                    <div className="relative group">
+                      <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-primary-500 transition-colors" />
+                      <input
+                        type="text"
+                        id="gymName"
+                        name="gymName"
+                        value={formData.gymName}
+                        onChange={handleChange}
+                        className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-300 hover:border-primary-300"
+                        placeholder="Your Gym Name"
+                        required
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">This will be your gym's unique identifier</p>
                   </div>
                 </>
               ) : (

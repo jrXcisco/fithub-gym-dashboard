@@ -16,6 +16,15 @@ export interface Address {
   country: string;
 }
 
+export interface PaymentRecord {
+  id?: string;
+  amount: number;
+  method: PaymentMethod;
+  date: string;
+  notes?: string;
+  receiptNumber?: string;
+}
+
 export interface PaymentInfo {
   method: PaymentMethod;
   status: PaymentStatus;
@@ -53,6 +62,7 @@ export interface Member {
   subscriptionPlan: SubscriptionPlan;
   status: MemberStatus;
   payment: PaymentInfo;
+  paymentHistory?: PaymentRecord[];
   workoutProgram?: WorkoutProgram;
   createdAt: string;
   updatedAt: string;

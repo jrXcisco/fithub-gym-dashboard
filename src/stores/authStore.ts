@@ -10,6 +10,8 @@ export interface User {
   lastName: string;
   phone?: string;
   role: string;
+  gymUuid?: string;
+  gymName?: string;
 }
 
 interface AuthState {
@@ -30,6 +32,8 @@ interface SignupData {
   email: string;
   phone?: string;
   password: string;
+  role?: string;
+  gymName?: string;
 }
 
 export const useAuthStore = create<AuthState>()(
