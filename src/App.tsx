@@ -4,16 +4,21 @@ import { apolloClient } from './lib/apollo';
 import { DashboardLayout } from './components/layout';
 import { DashboardPage } from './features/dashboard';
 import { MembersListPage, MemberDetailPage } from './features/members';
-import { TrainersPage } from './features/trainers';
-import { FollowUpsPage } from './features/followups';
+import { TrainersPage, TeamDetailPage } from './features/trainers';
+import { FollowUpsPage, FollowupDetailPage } from './features/followups';
 import { EventsPage } from './features/events';
-import { ResourcesPage } from './features/resources';
+import { ResourcesPage, ResourceDetailPage } from './features/resources';
 import { LoginPage, SignupPage } from './features/auth';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
+import { GymLoader } from './components/ui/GymLoader';
+import { useLoadingStore } from './stores/loadingStore';
 
 function App() {
+  const isLoading = useLoadingStore((state) => state.isLoading);
+
   return (
     <ApolloProvider client={apolloClient}>
+    {isLoading && <GymLoader />}
     <BrowserRouter>
       <Routes>
         {/* Public Routes */}
@@ -30,10 +35,13 @@ function App() {
           <Route index element={<DashboardPage />} />
           <Route path="members" element={<MembersListPage />} />
           <Route path="members/:id" element={<MemberDetailPage />} />
-          <Route path="trainers" element={<TrainersPage />} />
+          <Route path="team" element={<TrainersPage />} />
+          <Route path="team/:id" element={<TeamDetailPage />} />
           <Route path="follow-ups" element={<FollowUpsPage />} />
+          <Route path="follow-ups/:id" element={<FollowupDetailPage />} />
           <Route path="events" element={<EventsPage />} />
           <Route path="resources" element={<ResourcesPage />} />
+          <Route path="resources/:id" element={<ResourceDetailPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

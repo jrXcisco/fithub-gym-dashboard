@@ -111,12 +111,14 @@ const resolvers = {
       const query = { gymUuid };
 
       if (safeFilter.status) query.status = safeFilter.status;
+      if (safeFilter.role) query.role = safeFilter.role;
       if (safeFilter.specialization) query.specializations = safeFilter.specialization;
       if (safeFilter.search) {
         query.$or = [
           { firstName: { $regex: safeFilter.search, $options: 'i' } },
           { lastName: { $regex: safeFilter.search, $options: 'i' } },
           { email: { $regex: safeFilter.search, $options: 'i' } },
+          { phone: { $regex: safeFilter.search, $options: 'i' } },
         ];
       }
 
@@ -439,16 +441,22 @@ const resolvers = {
       return await Member.findById(memberId).populate('assignedTrainer');
     },
 
-    // Trainer Mutations
+    // Trainer/Team Member Mutations
     createTrainer: async (_, { input }, { user }) => {
       const gymUuid = await getGymUuid(user);
 
       const existingTrainer = await Trainer.findOne({ gymUuid, email: input.email });
       if (existingTrainer) {
-        throw new Error('Trainer with this email already exists in your gym');
+        throw new Error('Team member with this email already exists in your gym');
       }
 
-      const trainer = await Trainer.create({ ...input, gymUuid });
+      const trainerData = {
+        ...input,
+        gymUuid,
+        joiningDate: input.joiningDate ? new Date(input.joiningDate) : new Date(),
+      };
+
+      const trainer = await Trainer.create(trainerData);
       return trainer;
     },
 
@@ -457,10 +465,13 @@ const resolvers = {
 
       const trainer = await Trainer.findOne({ _id: id, gymUuid });
       if (!trainer) {
-        throw new Error('Trainer not found');
+        throw new Error('Team member not found');
       }
 
-      const updatedTrainer = await Trainer.findByIdAndUpdate(id, input, { new: true });
+      const updateData = { ...input };
+      if (input.joiningDate) updateData.joiningDate = new Date(input.joiningDate);
+
+      const updatedTrainer = await Trainer.findByIdAndUpdate(id, updateData, { new: true });
       return updatedTrainer;
     },
 
@@ -572,25 +583,32 @@ const resolvers = {
       };
 
       if (input.maintenanceSchedule) {
-        resourceData.maintenanceSchedule = {
-          ...input.maintenanceSchedule,
-          lastMaintenance: input.maintenanceSchedule.lastMaintenance
-            ? new Date(input.maintenanceSchedule.lastMaintenance)
-            : undefined,
-          nextMaintenance: input.maintenanceSchedule.nextMaintenance
-            ? new Date(input.maintenanceSchedule.nextMaintenance)
-            : undefined,
-        };
+        resourceData.maintenanceSchedule = {};
+        if (input.maintenanceSchedule.lastMaintenance) {
+          resourceData.maintenanceSchedule.lastMaintenance = new Date(input.maintenanceSchedule.lastMaintenance);
+        }
+        if (input.maintenanceSchedule.nextMaintenance) {
+          resourceData.maintenanceSchedule.nextMaintenance = new Date(input.maintenanceSchedule.nextMaintenance);
+        }
+        if (input.maintenanceSchedule.frequency) {
+          resourceData.maintenanceSchedule.frequency = input.maintenanceSchedule.frequency;
+        }
       }
 
-      if (input.specifications?.warranty?.expiryDate) {
-        resourceData.specifications = {
-          ...input.specifications,
-          warranty: {
-            ...input.specifications.warranty,
-            expiryDate: new Date(input.specifications.warranty.expiryDate),
-          },
-        };
+      if (input.specifications) {
+        resourceData.specifications = {};
+        if (input.specifications.brand) resourceData.specifications.brand = input.specifications.brand;
+        if (input.specifications.model) resourceData.specifications.model = input.specifications.model;
+        if (input.specifications.serialNumber) resourceData.specifications.serialNumber = input.specifications.serialNumber;
+        if (input.specifications.warranty) {
+          resourceData.specifications.warranty = {};
+          if (input.specifications.warranty.expiryDate) {
+            resourceData.specifications.warranty.expiryDate = new Date(input.specifications.warranty.expiryDate);
+          }
+          if (input.specifications.warranty.provider) {
+            resourceData.specifications.warranty.provider = input.specifications.warranty.provider;
+          }
+        }
       }
 
       const resource = await Resource.create(resourceData);
@@ -609,25 +627,32 @@ const resolvers = {
       if (input.purchaseDate) updateData.purchaseDate = new Date(input.purchaseDate);
 
       if (input.maintenanceSchedule) {
-        updateData.maintenanceSchedule = {
-          ...input.maintenanceSchedule,
-          lastMaintenance: input.maintenanceSchedule.lastMaintenance
-            ? new Date(input.maintenanceSchedule.lastMaintenance)
-            : undefined,
-          nextMaintenance: input.maintenanceSchedule.nextMaintenance
-            ? new Date(input.maintenanceSchedule.nextMaintenance)
-            : undefined,
-        };
+        updateData.maintenanceSchedule = {};
+        if (input.maintenanceSchedule.lastMaintenance) {
+          updateData.maintenanceSchedule.lastMaintenance = new Date(input.maintenanceSchedule.lastMaintenance);
+        }
+        if (input.maintenanceSchedule.nextMaintenance) {
+          updateData.maintenanceSchedule.nextMaintenance = new Date(input.maintenanceSchedule.nextMaintenance);
+        }
+        if (input.maintenanceSchedule.frequency) {
+          updateData.maintenanceSchedule.frequency = input.maintenanceSchedule.frequency;
+        }
       }
 
-      if (input.specifications?.warranty?.expiryDate) {
-        updateData.specifications = {
-          ...input.specifications,
-          warranty: {
-            ...input.specifications.warranty,
-            expiryDate: new Date(input.specifications.warranty.expiryDate),
-          },
-        };
+      if (input.specifications) {
+        updateData.specifications = {};
+        if (input.specifications.brand) updateData.specifications.brand = input.specifications.brand;
+        if (input.specifications.model) updateData.specifications.model = input.specifications.model;
+        if (input.specifications.serialNumber) updateData.specifications.serialNumber = input.specifications.serialNumber;
+        if (input.specifications.warranty) {
+          updateData.specifications.warranty = {};
+          if (input.specifications.warranty.expiryDate) {
+            updateData.specifications.warranty.expiryDate = new Date(input.specifications.warranty.expiryDate);
+          }
+          if (input.specifications.warranty.provider) {
+            updateData.specifications.warranty.provider = input.specifications.warranty.provider;
+          }
+        }
       }
 
       const updatedResource = await Resource.findByIdAndUpdate(id, updateData, { new: true });
@@ -670,6 +695,8 @@ const resolvers = {
 
   Trainer: {
     id: (parent) => parent._id || parent.id,
+    role: (parent) => parent.role || 'trainer',
+    joiningDate: (parent) => formatDate(parent.joiningDate),
     createdAt: (parent) => formatDate(parent.createdAt),
     updatedAt: (parent) => formatDate(parent.updatedAt),
   },

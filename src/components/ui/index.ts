@@ -7,3 +7,4 @@ export { Stepper } from './Stepper';
 export { Widget } from './Widget';
 export { DataTable } from './DataTable';
 export { Textarea } from './Textarea';
+export { GymLoader } from './GymLoader';

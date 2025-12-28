@@ -28,6 +28,11 @@ const trainerSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    role: {
+      type: String,
+      enum: ['trainer', 'cleaning-staff', 'receptionist', 'manager', 'maintenance', 'security', 'other'],
+      default: 'trainer',
+    },
     specializations: {
       type: [String],
       default: [],
@@ -44,36 +49,46 @@ const trainerSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
-    hourlyRate: {
+    salary: {
       type: Number,
       default: 0,
     },
+    joiningDate: {
+      type: Date,
+    },
     availability: {
-      monday: { start: String, end: String },
-      tuesday: { start: String, end: String },
-      wednesday: { start: String, end: String },
-      thursday: { start: String, end: String },
-      friday: { start: String, end: String },
-      saturday: { start: String, end: String },
-      sunday: { start: String, end: String },
+      days: {
+        type: [String],
+        default: [],
+      },
+      startTime: {
+        type: String,
+        default: '09:00',
+      },
+      endTime: {
+        type: String,
+        default: '18:00',
+      },
     },
     status: {
       type: String,
-      enum: ['active', 'inactive', 'on_leave'],
+      enum: ['active', 'inactive'],
       default: 'active',
     },
     profileImage: {
       type: String,
     },
-    rating: {
-      type: Number,
-      min: 0,
-      max: 5,
-      default: 0,
+    address: {
+      street: String,
+      city: String,
+      state: String,
+      zipCode: String,
+      country: String,
     },
-    totalClients: {
-      type: Number,
-      default: 0,
+    emergencyContact: {
+      name: String,
+      phone: String,
+      relation: String,
     },
   },
   {
@@ -83,6 +98,7 @@ const trainerSchema = new mongoose.Schema(
 
 trainerSchema.index({ gymUuid: 1, email: 1 }, { unique: true });
 trainerSchema.index({ gymUuid: 1, status: 1 });
+trainerSchema.index({ gymUuid: 1, role: 1 });
 trainerSchema.index({ gymUuid: 1, specializations: 1 });
 
 module.exports = mongoose.model('Trainer', trainerSchema);

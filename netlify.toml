@@ -3,7 +3,7 @@
   publish = "dist"
 
 [build.environment]
-  VITE_API_URL = "https://fithub-backend.onrender.com/graphql"
+  VITE_API_URL = "https://fithub-backend-q6l5.onrender.com/graphql"
 
 [[redirects]]
   from = "/*"

@@ -16,7 +16,7 @@ import { useAuthStore } from '../../stores/authStore';
 const navItems = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/dashboard/members', icon: Users, label: 'Members' },
-  { to: '/dashboard/trainers', icon: UserCheck, label: 'Trainers' },
+  { to: '/dashboard/team', icon: UserCheck, label: 'Team' },
   { to: '/dashboard/follow-ups', icon: PhoneCall, label: 'Follow-ups' },
   { to: '/dashboard/events', icon: Calendar, label: 'Events' },
   { to: '/dashboard/resources', icon: Package, label: 'Resources' },

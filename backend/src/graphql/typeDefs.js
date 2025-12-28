@@ -190,20 +190,17 @@ const typeDefs = `#graphql
     search: String
   }
 
-  # Trainer Types
-  type Availability {
-    start: String
-    end: String
+  # Team Member Types (formerly Trainer)
+  type TeamAvailability {
+    days: [String]
+    startTime: String
+    endTime: String
   }
 
-  type TrainerAvailability {
-    monday: Availability
-    tuesday: Availability
-    wednesday: Availability
-    thursday: Availability
-    friday: Availability
-    saturday: Availability
-    sunday: Availability
+  type TeamEmergencyContact {
+    name: String
+    phone: String
+    relation: String
   }
 
   type Trainer {
@@ -213,16 +210,18 @@ const typeDefs = `#graphql
     lastName: String!
     email: String!
     phone: String
+    role: String!
     specializations: [String]
     certifications: [String]
     experience: Int
     bio: String
-    hourlyRate: Float
-    availability: TrainerAvailability
+    salary: Float
+    joiningDate: String
+    availability: TeamAvailability
     status: String!
     profileImage: String
-    rating: Float
-    totalClients: Int
+    address: Address
+    emergencyContact: TeamEmergencyContact
     createdAt: String!
     updatedAt: String!
   }
@@ -235,19 +234,16 @@ const typeDefs = `#graphql
     totalPages: Int!
   }
 
-  input AvailabilityInput {
-    start: String
-    end: String
+  input TeamAvailabilityInput {
+    days: [String]
+    startTime: String
+    endTime: String
   }
 
-  input TrainerAvailabilityInput {
-    monday: AvailabilityInput
-    tuesday: AvailabilityInput
-    wednesday: AvailabilityInput
-    thursday: AvailabilityInput
-    friday: AvailabilityInput
-    saturday: AvailabilityInput
-    sunday: AvailabilityInput
+  input TeamEmergencyContactInput {
+    name: String
+    phone: String
+    relation: String
   }
 
   input TrainerInput {
@@ -255,14 +251,18 @@ const typeDefs = `#graphql
     lastName: String!
     email: String!
     phone: String
+    role: String
     specializations: [String]
     certifications: [String]
     experience: Int
     bio: String
-    hourlyRate: Float
-    availability: TrainerAvailabilityInput
+    salary: Float
+    joiningDate: String
+    availability: TeamAvailabilityInput
     status: String
     profileImage: String
+    address: AddressInput
+    emergencyContact: TeamEmergencyContactInput
   }
 
   input TrainerUpdateInput {
@@ -270,18 +270,23 @@ const typeDefs = `#graphql
     lastName: String
     email: String
     phone: String
+    role: String
     specializations: [String]
     certifications: [String]
     experience: Int
     bio: String
-    hourlyRate: Float
-    availability: TrainerAvailabilityInput
+    salary: Float
+    joiningDate: String
+    availability: TeamAvailabilityInput
     status: String
     profileImage: String
+    address: AddressInput
+    emergencyContact: TeamEmergencyContactInput
   }
 
   input TrainerFilterInput {
     status: String
+    role: String
     specialization: String
     search: String
   }

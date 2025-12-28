@@ -98,6 +98,20 @@ export const CREATE_RESOURCE = gql`
       location
       purchaseDate
       purchasePrice
+      maintenanceSchedule {
+        lastMaintenance
+        nextMaintenance
+        frequency
+      }
+      specifications {
+        brand
+        model
+        serialNumber
+        warranty {
+          expiryDate
+          provider
+        }
+      }
       image
       notes
       createdAt
@@ -120,6 +134,20 @@ export const UPDATE_RESOURCE = gql`
       location
       purchaseDate
       purchasePrice
+      maintenanceSchedule {
+        lastMaintenance
+        nextMaintenance
+        frequency
+      }
+      specifications {
+        brand
+        model
+        serialNumber
+        warranty {
+          expiryDate
+          provider
+        }
+      }
       image
       notes
       createdAt

@@ -13,6 +13,7 @@ commandOrigin = "config"
 command = "npm run build"
 
 [build.environment]
+VITE_API_URL = "https://fithub-backend-q6l5.onrender.com/graphql"
 
 [build.processing]
 
