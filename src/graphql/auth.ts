@@ -11,6 +11,8 @@ export const LOGIN_MUTATION = gql`
         email
         phone
         role
+        gymUuid
+        gymName
       }
     }
   }
@@ -23,6 +25,8 @@ export const SIGNUP_MUTATION = gql`
     $email: String!
     $phone: String
     $password: String!
+    $role: String
+    $gymName: String
   ) {
     signup(
       firstName: $firstName
@@ -30,6 +34,8 @@ export const SIGNUP_MUTATION = gql`
       email: $email
       phone: $phone
       password: $password
+      role: $role
+      gymName: $gymName
     ) {
       token
       user {
@@ -39,6 +45,8 @@ export const SIGNUP_MUTATION = gql`
         email
         phone
         role
+        gymUuid
+        gymName
       }
     }
   }
@@ -53,6 +61,8 @@ export const ME_QUERY = gql`
       email
       phone
       role
+      gymUuid
+      gymName
     }
   }
 `;

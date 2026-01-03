@@ -11,9 +11,10 @@ interface StepperProps {
   steps: Step[];
   currentStep: number;
   onStepClick?: (step: number) => void;
+  stepsWithErrors?: number[];
 }
 
-export function Stepper({ steps, currentStep, onStepClick }: StepperProps) {
+export function Stepper({ steps, currentStep, onStepClick, stepsWithErrors = [] }: StepperProps) {
   return (
     <nav aria-label="Progress">
       <ol className="flex items-center">
@@ -31,7 +32,9 @@ export function Stepper({ steps, currentStep, onStepClick }: StepperProps) {
                 disabled={!onStepClick}
                 className={cn(
                   'relative flex h-10 w-10 items-center justify-center rounded-full transition-colors',
-                  currentStep > step.id
+                  stepsWithErrors.includes(step.id)
+                    ? 'bg-red-500 hover:bg-red-600'
+                    : currentStep > step.id
                     ? 'bg-primary-600 hover:bg-primary-700'
                     : currentStep === step.id
                     ? 'bg-primary-600'
@@ -65,7 +68,9 @@ export function Stepper({ steps, currentStep, onStepClick }: StepperProps) {
               <span
                 className={cn(
                   'text-sm font-medium',
-                  currentStep >= step.id ? 'text-primary-600' : 'text-gray-500'
+                  stepsWithErrors.includes(step.id)
+                    ? 'text-red-500'
+                    : currentStep >= step.id ? 'text-primary-600' : 'text-gray-500'
                 )}
               >
                 {step.title}

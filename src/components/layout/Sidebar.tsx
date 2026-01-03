@@ -7,7 +7,6 @@ import {
   UserCheck,
   Package,
   PhoneCall,
-  Settings,
   LogOut,
   Dumbbell,
   ChevronDown,
@@ -19,15 +18,7 @@ import { useAuthStore } from '../../stores/authStore';
 const navItems = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/dashboard/members', icon: Users, label: 'Members' },
-  { 
-    label: 'Team', 
-    icon: UserCheck, 
-    items: [
-      { to: '/dashboard/team/manager', label: 'Manager' },
-      { to: '/dashboard/trainers', label: 'Trainers' },
-      { to: '/dashboard/team/helper', label: 'Helper' }
-    ] 
-  },
+  { to: '/dashboard/team', icon: UserCheck, label: 'Team' },
   { to: '/dashboard/follow-ups', icon: PhoneCall, label: 'Follow-ups' },
   { to: '/dashboard/events', icon: Calendar, label: 'Events' },
   { to: '/dashboard/resources', icon: Package, label: 'Resources' },
@@ -118,13 +109,6 @@ export function Sidebar() {
       </nav>
 
       <div className="p-4 border-t border-gray-800 space-y-1">
-        <NavLink
-          to="/settings"
-          className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-400 hover:bg-gray-800 hover:text-white transition-colors"
-        >
-          <Settings className="w-5 h-5" />
-          <span className="font-medium">Settings</span>
-        </NavLink>
         <button 
           onClick={handleLogout}
           className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-gray-400 hover:bg-gray-800 hover:text-white transition-colors"

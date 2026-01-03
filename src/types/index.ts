@@ -16,6 +16,15 @@ export interface Address {
   country: string;
 }
 
+export interface PaymentRecord {
+  id?: string;
+  amount: number;
+  method: PaymentMethod;
+  date: string;
+  notes?: string;
+  receiptNumber?: string;
+}
+
 export interface PaymentInfo {
   method: PaymentMethod;
   status: PaymentStatus;
@@ -53,17 +62,21 @@ export interface Member {
   subscriptionPlan: SubscriptionPlan;
   status: MemberStatus;
   payment: PaymentInfo;
+  paymentHistory?: PaymentRecord[];
   workoutProgram?: WorkoutProgram;
   createdAt: string;
   updatedAt: string;
 }
 
-export interface Trainer {
+export type TeamRole = 'trainer' | 'cleaning-staff' | 'receptionist' | 'manager' | 'maintenance' | 'security' | 'other';
+
+export interface TeamMember {
   id: string;
   firstName: string;
   lastName: string;
   email: string;
   phone: string;
+  role: TeamRole;
   specialization: string[];
   experience: number;
   certifications: string[];
@@ -75,9 +88,19 @@ export interface Trainer {
   salary: number;
   status: 'active' | 'inactive';
   profileImage?: string;
+  joiningDate?: string;
+  address?: Address;
+  emergencyContact?: {
+    name: string;
+    phone: string;
+    relation: string;
+  };
   createdAt: string;
   updatedAt: string;
 }
+
+// Alias for backward compatibility
+export type Trainer = TeamMember;
 
 export interface FollowUp {
   id: string;

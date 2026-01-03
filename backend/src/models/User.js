@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const { v4: uuidv4 } = require('uuid');
 
 const userSchema = new mongoose.Schema(
   {
@@ -35,6 +36,16 @@ const userSchema = new mongoose.Schema(
       enum: ['user', 'admin', 'trainer'],
       default: 'user',
     },
+    gymUuid: {
+      type: String,
+      unique: true,
+      sparse: true,
+      index: true,
+    },
+    gymName: {
+      type: String,
+      trim: true,
+    },
   },
   {
     timestamps: true,
@@ -42,6 +53,9 @@ const userSchema = new mongoose.Schema(
 );
 
 userSchema.pre('save', async function (next) {
+  if (this.role === 'admin' && !this.gymUuid) {
+    this.gymUuid = uuidv4();
+  }
   if (!this.isModified('password')) {
     return next();
   }

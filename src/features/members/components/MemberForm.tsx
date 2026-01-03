@@ -54,6 +54,8 @@ const planPrices: Record<SubscriptionPlan, number> = {
 
 export function MemberForm({ initialData, onSubmit, onCancel }: MemberFormProps) {
   const [currentStep, setCurrentStep] = useState(1);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [stepsWithErrors, setStepsWithErrors] = useState<number[]>([]);
   const [formData, setFormData] = useState({
     firstName: initialData?.firstName || '',
     lastName: initialData?.lastName || '',
@@ -79,6 +81,68 @@ export function MemberForm({ initialData, onSubmit, onCancel }: MemberFormProps)
 
   const handleChange = (field: string, value: string | number) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+    // Clear error when field is updated
+    if (errors[field]) {
+      setErrors((prev) => ({ ...prev, [field]: '' }));
+    }
+    // Clear step from error list when user starts fixing
+    if (stepsWithErrors.includes(currentStep)) {
+      setStepsWithErrors((prev) => prev.filter((s) => s !== currentStep));
+    }
+  };
+
+  const validateStep = (step: number): Record<string, string> => {
+    const stepErrors: Record<string, string> = {};
+
+    if (step === 1) {
+      if (!formData.firstName.trim()) stepErrors.firstName = 'First name is required';
+      if (!formData.lastName.trim()) stepErrors.lastName = 'Last name is required';
+      if (!formData.email.trim()) stepErrors.email = 'Email is required';
+      if (!formData.phone.trim()) stepErrors.phone = 'Phone is required';
+      if (!formData.dateOfBirth) stepErrors.dateOfBirth = 'Date of birth is required';
+      if (!formData.gender) stepErrors.gender = 'Gender is required';
+    }
+
+    if (step === 3) {
+      if (!formData.subscriptionPlan) stepErrors.subscriptionPlan = 'Subscription plan is required';
+      if (!formData.membershipStartDate) stepErrors.membershipStartDate = 'Membership start date is required';
+    }
+
+    if (step === 4) {
+      if (!formData.paymentMethod) stepErrors.paymentMethod = 'Payment method is required';
+      if (formData.paidAmount < 0) stepErrors.paidAmount = 'Amount cannot be negative';
+    }
+
+    if (step === 5) {
+      if (!formData.workoutGoal) stepErrors.workoutGoal = 'Fitness goal is required';
+    }
+
+    return stepErrors;
+  };
+
+  const validateAllSteps = (): boolean => {
+    const allErrors: Record<string, string> = {};
+    const errorSteps: number[] = [];
+
+    // Validate all steps
+    [1, 3, 4, 5].forEach((step) => {
+      const stepErrors = validateStep(step);
+      if (Object.keys(stepErrors).length > 0) {
+        errorSteps.push(step);
+        Object.assign(allErrors, stepErrors);
+      }
+    });
+
+    setErrors(allErrors);
+    setStepsWithErrors(errorSteps);
+
+    // If there are errors, navigate to the first step with errors
+    if (errorSteps.length > 0) {
+      setCurrentStep(errorSteps[0]);
+      return false;
+    }
+
+    return true;
   };
 
   const calculateEndDate = (startDate: string, plan: SubscriptionPlan): string => {
@@ -101,6 +165,8 @@ export function MemberForm({ initialData, onSubmit, onCancel }: MemberFormProps)
   };
 
   const handleSubmit = () => {
+    if (!validateAllSteps()) return;
+    
     const plan = formData.subscriptionPlan as SubscriptionPlan;
     const amount = planPrices[plan];
     const endDate = calculateEndDate(formData.membershipStartDate, plan);
@@ -146,12 +212,44 @@ export function MemberForm({ initialData, onSubmit, onCancel }: MemberFormProps)
     onSubmit(memberData);
   };
 
-  const nextStep = () => setCurrentStep((prev) => Math.min(prev + 1, 5));
-  const prevStep = () => setCurrentStep((prev) => Math.max(prev - 1, 1));
+  const validateCurrentStep = () => {
+    const stepErrors = validateStep(currentStep);
+    if (Object.keys(stepErrors).length > 0) {
+      setErrors((prev) => ({ ...prev, ...stepErrors }));
+      if (!stepsWithErrors.includes(currentStep)) {
+        setStepsWithErrors((prev) => [...prev, currentStep]);
+      }
+    } else {
+      // Clear errors for this step if it's now valid
+      setStepsWithErrors((prev) => prev.filter((s) => s !== currentStep));
+    }
+  };
+
+  const nextStep = () => {
+    const stepErrors = validateStep(currentStep);
+    if (Object.keys(stepErrors).length > 0) {
+      setErrors((prev) => ({ ...prev, ...stepErrors }));
+      if (!stepsWithErrors.includes(currentStep)) {
+        setStepsWithErrors((prev) => [...prev, currentStep]);
+      }
+      return; // Block navigation if current step has errors
+    }
+    setStepsWithErrors((prev) => prev.filter((s) => s !== currentStep));
+    setCurrentStep((prev) => Math.min(prev + 1, 5));
+  };
+  const prevStep = () => {
+    validateCurrentStep();
+    setCurrentStep((prev) => Math.max(prev - 1, 1));
+  };
+
+  const handleStepClick = (step: number) => {
+    validateCurrentStep();
+    setCurrentStep(step);
+  };
 
   return (
     <div className="space-y-8">
-      <Stepper steps={steps} currentStep={currentStep} />
+      <Stepper steps={steps} currentStep={currentStep} onStepClick={handleStepClick} stepsWithErrors={stepsWithErrors} />
 
       <div className="mt-8">
         {currentStep === 1 && (
@@ -163,12 +261,14 @@ export function MemberForm({ initialData, onSubmit, onCancel }: MemberFormProps)
                 value={formData.firstName}
                 onChange={(e) => handleChange('firstName', e.target.value)}
                 required
+                error={errors.firstName}
               />
               <Input
                 label="Last Name"
                 value={formData.lastName}
                 onChange={(e) => handleChange('lastName', e.target.value)}
                 required
+                error={errors.lastName}
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -178,6 +278,7 @@ export function MemberForm({ initialData, onSubmit, onCancel }: MemberFormProps)
                 value={formData.email}
                 onChange={(e) => handleChange('email', e.target.value)}
                 required
+                error={errors.email}
               />
               <Input
                 label="Phone"
@@ -185,6 +286,7 @@ export function MemberForm({ initialData, onSubmit, onCancel }: MemberFormProps)
                 value={formData.phone}
                 onChange={(e) => handleChange('phone', e.target.value)}
                 required
+                error={errors.phone}
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -194,12 +296,15 @@ export function MemberForm({ initialData, onSubmit, onCancel }: MemberFormProps)
                 value={formData.dateOfBirth}
                 onChange={(e) => handleChange('dateOfBirth', e.target.value)}
                 required
+                error={errors.dateOfBirth}
               />
               <Select
                 label="Gender"
                 options={genderOptions}
                 value={formData.gender}
                 onChange={(e) => handleChange('gender', e.target.value)}
+                required
+                error={errors.gender}
               />
             </div>
             <h4 className="text-md font-medium text-gray-800 mt-6 mb-2">Emergency Contact</h4>
@@ -267,12 +372,16 @@ export function MemberForm({ initialData, onSubmit, onCancel }: MemberFormProps)
               options={subscriptionOptions}
               value={formData.subscriptionPlan}
               onChange={(e) => handleChange('subscriptionPlan', e.target.value)}
+              required
+              error={errors.subscriptionPlan}
             />
             <Input
               label="Membership Start Date"
               type="date"
               value={formData.membershipStartDate}
               onChange={(e) => handleChange('membershipStartDate', e.target.value)}
+              required
+              error={errors.membershipStartDate}
             />
             <div className="bg-gray-50 p-4 rounded-lg">
               <p className="text-sm text-gray-600">
@@ -293,12 +402,16 @@ export function MemberForm({ initialData, onSubmit, onCancel }: MemberFormProps)
               options={paymentMethodOptions}
               value={formData.paymentMethod}
               onChange={(e) => handleChange('paymentMethod', e.target.value)}
+              required
+              error={errors.paymentMethod}
             />
             <Input
               label="Amount Paid"
               type="number"
               value={formData.paidAmount}
               onChange={(e) => handleChange('paidAmount', Number(e.target.value))}
+              required
+              error={errors.paidAmount}
             />
             <div className="bg-gray-50 p-4 rounded-lg">
               <p className="text-sm text-gray-600">
@@ -322,6 +435,8 @@ export function MemberForm({ initialData, onSubmit, onCancel }: MemberFormProps)
               options={workoutGoalOptions}
               value={formData.workoutGoal}
               onChange={(e) => handleChange('workoutGoal', e.target.value)}
+              required
+              error={errors.workoutGoal}
             />
             <Textarea
               label="Notes / Special Requirements"
