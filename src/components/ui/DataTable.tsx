@@ -109,8 +109,6 @@ export function DataTable<T extends { id: string }>({
   const totalPages = serverSidePagination && totalItems 
     ? Math.ceil(totalItems / pageSize) 
     : Math.ceil(filteredData.length / pageSize);
-  
-  const displayTotal = serverSidePagination && totalItems ? totalItems : filteredData.length;
 
   const handlePageSizeChange = (newSize: number) => {
     setPageSize(newSize);
