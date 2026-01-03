@@ -38,6 +38,12 @@ export const GET_RESOURCES = gql`
       page
       limit
       totalPages
+      stats {
+        total
+        available
+        maintenance
+        outOfOrder
+      }
     }
   }
 `;

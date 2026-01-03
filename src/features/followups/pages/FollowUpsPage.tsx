@@ -73,6 +73,12 @@ export function FollowUpsPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedFollowUp, setSelectedFollowUp] = useState<FollowupData | null>(null);
   const [statusFilter, setStatusFilter] = useState('all');
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [searchTerm, setSearchTerm] = useState('');
+
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -87,8 +93,11 @@ export function FollowUpsPage() {
 
   const { data, loading, error, refetch } = useQuery(GET_FOLLOWUPS, {
     variables: {
-      filter: statusFilter !== 'all' ? { status: statusFilter } : null,
-      pagination: { page: 1, limit: 100 },
+      filter: {
+        ...(statusFilter !== 'all' ? { status: statusFilter } : {}),
+        ...(searchTerm ? { search: searchTerm } : {}),
+      },
+      pagination: { page: currentPage, limit: pageSize },
     },
     fetchPolicy: 'network-only',
   });
@@ -146,12 +155,20 @@ export function FollowUpsPage() {
   });
 
   const followUps: FollowupData[] = data?.followups?.followups || [];
+  const totalFollowUps = data?.followups?.total || 0;
   const members = membersData?.members?.members || [];
   const trainers = trainersData?.trainers?.trainers || [];
 
-  const pendingFollowUps = followUps.filter((f) => f.status === 'pending').length;
-  const completedFollowUps = followUps.filter((f) => f.status === 'completed').length;
-  const highPriorityFollowUps = followUps.filter((f) => f.priority === 'high' && f.status === 'pending').length;
+  // Use stats from server for widgets (all records, not just paginated)
+  const stats = data?.followups?.stats;
+  const pendingFollowUps = stats?.pending || 0;
+  const completedFollowUps = stats?.completed || 0;
+  const highPriorityFollowUps = stats?.highPriority || 0;
+
+  // Pagination handlers
+  const handlePageChange = (page: number) => setCurrentPage(page);
+  const handlePageSizeChange = (size: number) => { setPageSize(size); setCurrentPage(1); };
+  const handleSearchChange = (search: string) => { setSearchTerm(search); setCurrentPage(1); };
 
   const memberOptions = members.map((m: any) => ({
     label: `${m.firstName} ${m.lastName}`,
@@ -642,6 +659,14 @@ export function FollowUpsPage() {
           onRowClick={handleRowClick}
           filterComponent={filterComponent}
           emptyMessage="No follow-ups found"
+          serverSidePagination={true}
+          totalItems={totalFollowUps}
+          currentPage={currentPage}
+          onPageChange={handlePageChange}
+          onPageSizeChange={handlePageSizeChange}
+          onSearchChange={handleSearchChange}
+          pageSize={pageSize}
+          pageSizeOptions={[10, 25, 50, 100]}
         />
 
         <Modal

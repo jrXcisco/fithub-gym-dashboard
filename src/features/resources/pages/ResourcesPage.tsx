@@ -13,7 +13,6 @@ import {
   Dumbbell,
   Building,
   ShoppingBag,
-  Box,
 } from 'lucide-react';
 import { Header } from '../../../components/layout';
 import { Widget, DataTable, Button, Modal, Input, Select, Textarea } from '../../../components/ui';
@@ -71,6 +70,12 @@ export function ResourcesPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedResource, setSelectedResource] = useState<ResourceData | null>(null);
   const [statusFilter, setStatusFilter] = useState('all');
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [searchTerm, setSearchTerm] = useState('');
+
   const [formData, setFormData] = useState({
     name: '',
     category: 'equipment',
@@ -94,8 +99,11 @@ export function ResourcesPage() {
 
   const { data, loading, error, refetch } = useQuery(GET_RESOURCES, {
     variables: {
-      filter: statusFilter !== 'all' ? { status: statusFilter } : null,
-      pagination: { page: 1, limit: 100 },
+      filter: {
+        ...(statusFilter !== 'all' ? { status: statusFilter } : {}),
+        ...(searchTerm ? { search: searchTerm } : {}),
+      },
+      pagination: { page: currentPage, limit: pageSize },
     },
     fetchPolicy: 'network-only',
   });
@@ -135,10 +143,19 @@ export function ResourcesPage() {
   });
 
   const resources: ResourceData[] = data?.resources?.resources || [];
+  const totalResources = data?.resources?.total || 0;
 
-  const availableResources = resources.filter((r) => r.status === 'available').length;
-  const maintenanceResources = resources.filter((r) => r.status === 'maintenance').length;
-  const outOfStockResources = resources.filter((r) => r.status === 'out-of-stock').length;
+  // Use stats from server for widgets (all records, not just paginated)
+  const stats = data?.resources?.stats;
+  const totalResourcesCount = stats?.total || 0;
+  const availableResources = stats?.available || 0;
+  const maintenanceResources = stats?.maintenance || 0;
+  const outOfStockResources = stats?.outOfOrder || 0;
+
+  // Pagination handlers
+  const handlePageChange = (page: number) => setCurrentPage(page);
+  const handlePageSizeChange = (size: number) => { setPageSize(size); setCurrentPage(1); };
+  const handleSearchChange = (search: string) => { setSearchTerm(search); setCurrentPage(1); };
 
   const columns = [
     {
@@ -655,7 +672,7 @@ export function ResourcesPage() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <Widget
             title="Total Resources"
-            value={resources.length}
+            value={totalResourcesCount}
             icon={Package}
             color="blue"
           />
@@ -696,6 +713,14 @@ export function ResourcesPage() {
           onRowClick={handleRowClick}
           filterComponent={filterComponent}
           emptyMessage="No resources found"
+          serverSidePagination={true}
+          totalItems={totalResources}
+          currentPage={currentPage}
+          onPageChange={handlePageChange}
+          onPageSizeChange={handlePageSizeChange}
+          onSearchChange={handleSearchChange}
+          pageSize={pageSize}
+          pageSizeOptions={[10, 25, 50, 100]}
         />
 
         <Modal

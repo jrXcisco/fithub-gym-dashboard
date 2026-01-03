@@ -8,12 +8,10 @@ import {
   Package,
   MapPin,
   Calendar,
-  DollarSign,
   Wrench,
   Info,
   Loader2,
   Tag,
-  Hash,
   Shield,
 } from 'lucide-react';
 import { Header } from '../../../components/layout';

@@ -42,6 +42,12 @@ export const GET_TEAM_MEMBERS = gql`
       page
       limit
       totalPages
+      stats {
+        total
+        active
+        trainers
+        totalSalary
+      }
     }
   }
 `;

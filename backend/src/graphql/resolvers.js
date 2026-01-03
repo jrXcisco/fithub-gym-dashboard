@@ -3,6 +3,7 @@ const Member = require('../models/Member');
 const Trainer = require('../models/Trainer');
 const Followup = require('../models/Followup');
 const Resource = require('../models/Resource');
+const Event = require('../models/Event');
 const { generateToken, verifyToken } = require('../utils/auth');
 
 const getGymUuid = async (user) => {
@@ -72,9 +73,13 @@ const resolvers = {
         ];
       }
 
-      const [members, total] = await Promise.all([
+      const [members, total, totalAll, activeCount, inactiveCount, expiredCount] = await Promise.all([
         Member.find(query).populate('assignedTrainer').skip(skip).limit(limit).sort({ createdAt: -1 }),
         Member.countDocuments(query),
+        Member.countDocuments({ gymUuid }),
+        Member.countDocuments({ gymUuid, status: 'active' }),
+        Member.countDocuments({ gymUuid, status: 'inactive' }),
+        Member.countDocuments({ gymUuid, status: 'expired' }),
       ]);
 
       return {
@@ -83,6 +88,12 @@ const resolvers = {
         page,
         limit,
         totalPages: Math.ceil(total / limit),
+        stats: {
+          total: totalAll,
+          active: activeCount,
+          inactive: inactiveCount,
+          expired: expiredCount,
+        },
       };
     },
 
@@ -122,10 +133,15 @@ const resolvers = {
         ];
       }
 
-      const [trainers, total] = await Promise.all([
+      const [trainers, total, allTrainers] = await Promise.all([
         Trainer.find(query).skip(skip).limit(limit).sort({ createdAt: -1 }),
         Trainer.countDocuments(query),
+        Trainer.find({ gymUuid }),
       ]);
+
+      const activeCount = allTrainers.filter(t => t.status === 'active').length;
+      const trainersRoleCount = allTrainers.filter(t => t.role === 'trainer').length;
+      const totalSalary = allTrainers.filter(t => t.status === 'active').reduce((sum, t) => sum + (t.salary || 0), 0);
 
       return {
         trainers,
@@ -133,6 +149,12 @@ const resolvers = {
         page,
         limit,
         totalPages: Math.ceil(total / limit),
+        stats: {
+          total: allTrainers.length,
+          active: activeCount,
+          trainers: trainersRoleCount,
+          totalSalary,
+        },
       };
     },
 
@@ -180,7 +202,7 @@ const resolvers = {
         ];
       }
 
-      const [followups, total] = await Promise.all([
+      const [followups, total, pendingCount, completedCount, highPriorityCount] = await Promise.all([
         Followup.find(query)
           .populate('member')
           .populate('trainer')
@@ -189,6 +211,9 @@ const resolvers = {
           .limit(limit)
           .sort({ scheduledDate: 1 }),
         Followup.countDocuments(query),
+        Followup.countDocuments({ gymUuid, status: 'pending' }),
+        Followup.countDocuments({ gymUuid, status: 'completed' }),
+        Followup.countDocuments({ gymUuid, priority: 'high', status: 'pending' }),
       ]);
 
       return {
@@ -197,6 +222,12 @@ const resolvers = {
         page,
         limit,
         totalPages: Math.ceil(total / limit),
+        stats: {
+          total: pendingCount + completedCount,
+          pending: pendingCount,
+          completed: completedCount,
+          highPriority: highPriorityCount,
+        },
       };
     },
 
@@ -250,9 +281,12 @@ const resolvers = {
         ];
       }
 
-      const [resources, total] = await Promise.all([
+      const [resources, total, availableCount, maintenanceCount, outOfOrderCount] = await Promise.all([
         Resource.find(query).skip(skip).limit(limit).sort({ createdAt: -1 }),
         Resource.countDocuments(query),
+        Resource.countDocuments({ gymUuid, status: 'available' }),
+        Resource.countDocuments({ gymUuid, status: 'maintenance' }),
+        Resource.countDocuments({ gymUuid, status: 'out_of_order' }),
       ]);
 
       return {
@@ -261,12 +295,97 @@ const resolvers = {
         page,
         limit,
         totalPages: Math.ceil(total / limit),
+        stats: {
+          total: await Resource.countDocuments({ gymUuid }),
+          available: availableCount,
+          maintenance: maintenanceCount,
+          outOfOrder: outOfOrderCount,
+        },
       };
     },
 
     resourcesCount: async (_, __, { user }) => {
       const gymUuid = await getGymUuid(user);
       return await Resource.countDocuments({ gymUuid });
+    },
+
+    // Event Queries
+    event: async (_, { id }, { user }) => {
+      const gymUuid = await getGymUuid(user);
+      const event = await Event.findOne({ _id: id, gymUuid }).populate('trainer');
+      if (!event) {
+        throw new Error('Event not found');
+      }
+      return event;
+    },
+
+    events: async (_, { filter, pagination }, { user }) => {
+      const gymUuid = await getGymUuid(user);
+      const safeFilter = filter || {};
+      const safePagination = pagination || {};
+      const { page = 1, limit = 10 } = safePagination;
+      const skip = (page - 1) * limit;
+
+      const query = { gymUuid };
+
+      if (safeFilter.type) query.type = safeFilter.type;
+      if (safeFilter.status) query.status = safeFilter.status;
+      if (safeFilter.startDate || safeFilter.endDate) {
+        query.startDate = {};
+        if (safeFilter.startDate) query.startDate.$gte = new Date(safeFilter.startDate);
+        if (safeFilter.endDate) query.startDate.$lte = new Date(safeFilter.endDate);
+      }
+      if (safeFilter.search) {
+        query.$or = [
+          { title: { $regex: safeFilter.search, $options: 'i' } },
+          { description: { $regex: safeFilter.search, $options: 'i' } },
+          { location: { $regex: safeFilter.search, $options: 'i' } },
+        ];
+      }
+
+      const [events, total, allEvents] = await Promise.all([
+        Event.find(query).populate('trainer').skip(skip).limit(limit).sort({ startDate: 1 }),
+        Event.countDocuments(query),
+        Event.find({ gymUuid }),
+      ]);
+
+      const upcomingCount = allEvents.filter(e => e.status === 'upcoming').length;
+      const ongoingCount = allEvents.filter(e => e.status === 'ongoing').length;
+      const totalParticipants = allEvents.reduce((sum, e) => sum + (e.currentParticipants || 0), 0);
+
+      return {
+        events,
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+        stats: {
+          total: allEvents.length,
+          upcoming: upcomingCount,
+          ongoing: ongoingCount,
+          totalParticipants,
+        },
+      };
+    },
+
+    eventsCount: async (_, __, { user }) => {
+      const gymUuid = await getGymUuid(user);
+      return await Event.countDocuments({ gymUuid });
+    },
+
+    upcomingEvents: async (_, { days = 30 }, { user }) => {
+      const gymUuid = await getGymUuid(user);
+      const now = new Date();
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + days);
+
+      return await Event.find({
+        gymUuid,
+        status: { $in: ['upcoming', 'ongoing'] },
+        startDate: { $gte: now, $lte: futureDate },
+      })
+        .populate('trainer')
+        .sort({ startDate: 1 });
     },
   },
 
@@ -670,6 +789,63 @@ const resolvers = {
       await Resource.findByIdAndDelete(id);
       return true;
     },
+
+    // Event Mutations
+    createEvent: async (_, { input }, { user }) => {
+      const gymUuid = await getGymUuid(user);
+
+      if (input.trainer) {
+        const trainer = await Trainer.findOne({ _id: input.trainer, gymUuid });
+        if (!trainer) {
+          throw new Error('Trainer not found');
+        }
+      }
+
+      const eventData = {
+        ...input,
+        gymUuid,
+        startDate: new Date(input.startDate),
+        endDate: new Date(input.endDate),
+      };
+
+      const event = await Event.create(eventData);
+      return await Event.findById(event._id).populate('trainer');
+    },
+
+    updateEvent: async (_, { id, input }, { user }) => {
+      const gymUuid = await getGymUuid(user);
+
+      const event = await Event.findOne({ _id: id, gymUuid });
+      if (!event) {
+        throw new Error('Event not found');
+      }
+
+      if (input.trainer) {
+        const trainer = await Trainer.findOne({ _id: input.trainer, gymUuid });
+        if (!trainer) {
+          throw new Error('Trainer not found');
+        }
+      }
+
+      const updateData = { ...input };
+      if (input.startDate) updateData.startDate = new Date(input.startDate);
+      if (input.endDate) updateData.endDate = new Date(input.endDate);
+
+      const updatedEvent = await Event.findByIdAndUpdate(id, updateData, { new: true }).populate('trainer');
+      return updatedEvent;
+    },
+
+    deleteEvent: async (_, { id }, { user }) => {
+      const gymUuid = await getGymUuid(user);
+
+      const event = await Event.findOne({ _id: id, gymUuid });
+      if (!event) {
+        throw new Error('Event not found');
+      }
+
+      await Event.findByIdAndDelete(id);
+      return true;
+    },
   },
 
   // Field Resolvers
@@ -714,10 +890,38 @@ const resolvers = {
     purchaseDate: (parent) => formatDate(parent.purchaseDate),
     createdAt: (parent) => formatDate(parent.createdAt),
     updatedAt: (parent) => formatDate(parent.updatedAt),
+    maintenanceSchedule: (parent) => {
+      if (!parent.maintenanceSchedule) return null;
+      return {
+        lastMaintenance: formatDate(parent.maintenanceSchedule.lastMaintenance),
+        nextMaintenance: formatDate(parent.maintenanceSchedule.nextMaintenance),
+        frequency: parent.maintenanceSchedule.frequency,
+      };
+    },
+    specifications: (parent) => {
+      if (!parent.specifications) return null;
+      return {
+        brand: parent.specifications.brand,
+        model: parent.specifications.model,
+        serialNumber: parent.specifications.serialNumber,
+        warranty: parent.specifications.warranty ? {
+          expiryDate: formatDate(parent.specifications.warranty.expiryDate),
+          provider: parent.specifications.warranty.provider,
+        } : null,
+      };
+    },
   },
 
   User: {
     id: (parent) => parent._id || parent.id,
+    createdAt: (parent) => formatDate(parent.createdAt),
+    updatedAt: (parent) => formatDate(parent.updatedAt),
+  },
+
+  Event: {
+    id: (parent) => parent._id || parent.id,
+    startDate: (parent) => formatDate(parent.startDate),
+    endDate: (parent) => formatDate(parent.endDate),
     createdAt: (parent) => formatDate(parent.createdAt),
     updatedAt: (parent) => formatDate(parent.updatedAt),
   },

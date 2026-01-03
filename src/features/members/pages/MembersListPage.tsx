@@ -87,11 +87,19 @@ export function MembersListPage() {
   const [selectedMember, setSelectedMember] = useState<MemberData | null>(null);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [statusFilter, setStatusFilter] = useState('all');
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const { data, loading, error, refetch } = useQuery(GET_MEMBERS, {
     variables: {
-      filter: statusFilter !== 'all' ? { status: statusFilter } : null,
-      pagination: { page: 1, limit: 100 },
+      filter: {
+        ...(statusFilter !== 'all' ? { status: statusFilter } : {}),
+        ...(searchTerm ? { search: searchTerm } : {}),
+      },
+      pagination: { page: currentPage, limit: pageSize },
     },
     fetchPolicy: 'network-only',
     errorPolicy: 'all',
@@ -297,12 +305,31 @@ export function MembersListPage() {
   const members: MemberData[] = Array.isArray(rawMembers) 
     ? rawMembers.filter((m): m is MemberData => m !== null && m !== undefined)
     : [];
+  
+  // Get total count from server response for pagination
+  const totalMembers = data?.members?.total || 0;
 
-  // Safe counting with null checks
-  const activeMembers = members.filter((m) => m?.status === 'active').length;
-  const inactiveMembers = members.filter((m) => m?.status === 'inactive').length;
-  const expiredMembers = members.filter((m) => m?.status === 'expired').length;
-  const suspendedMembers = members.filter((m) => m?.status === 'suspended').length;
+  // Use stats from server for widgets (all records, not just paginated)
+  const stats = data?.members?.stats;
+  const activeMembers = stats?.active || 0;
+  const inactiveMembers = stats?.inactive || 0;
+  const expiredMembers = stats?.expired || 0;
+  const suspendedMembers = 0; // Not tracked in stats
+
+  // Pagination handlers
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size);
+    setCurrentPage(1); // Reset to first page when changing page size
+  };
+
+  const handleSearchChange = (search: string) => {
+    setSearchTerm(search);
+    setCurrentPage(1); // Reset to first page when searching
+  };
 
   // Empty state - no members yet
   if (members.length === 0) {
@@ -541,7 +568,7 @@ export function MembersListPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Widget
             title="Total Members"
-            value={members.length}
+            value={stats?.total || 0}
             icon={Users}
             color="blue"
           />
@@ -589,6 +616,14 @@ export function MembersListPage() {
           onDownload={handleDownload}
           filterComponent={filterComponent}
           emptyMessage="No members found"
+          serverSidePagination={true}
+          totalItems={totalMembers}
+          currentPage={currentPage}
+          onPageChange={handlePageChange}
+          onPageSizeChange={handlePageSizeChange}
+          onSearchChange={handleSearchChange}
+          pageSize={pageSize}
+          pageSizeOptions={[10, 25, 50, 100]}
         />
 
         <Modal

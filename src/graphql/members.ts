@@ -62,6 +62,12 @@ export const GET_MEMBERS = gql`
       page
       limit
       totalPages
+      stats {
+        total
+        active
+        inactive
+        expired
+      }
     }
   }
 `;

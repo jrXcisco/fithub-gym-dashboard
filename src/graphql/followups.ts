@@ -38,6 +38,12 @@ export const GET_FOLLOWUPS = gql`
       page
       limit
       totalPages
+      stats {
+        total
+        pending
+        completed
+        highPriority
+      }
     }
   }
 `;

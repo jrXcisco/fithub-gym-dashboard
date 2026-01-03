@@ -89,12 +89,20 @@ const typeDefs = `#graphql
     updatedAt: String!
   }
 
+  type MemberStats {
+    total: Int!
+    active: Int!
+    inactive: Int!
+    expired: Int!
+  }
+
   type MemberList {
     members: [Member!]!
     total: Int!
     page: Int!
     limit: Int!
     totalPages: Int!
+    stats: MemberStats
   }
 
   input EmergencyContactInput {
@@ -226,12 +234,20 @@ const typeDefs = `#graphql
     updatedAt: String!
   }
 
+  type TrainerStats {
+    total: Int!
+    active: Int!
+    trainers: Int!
+    totalSalary: Float!
+  }
+
   type TrainerList {
     trainers: [Trainer!]!
     total: Int!
     page: Int!
     limit: Int!
     totalPages: Int!
+    stats: TrainerStats
   }
 
   input TeamAvailabilityInput {
@@ -295,7 +311,7 @@ const typeDefs = `#graphql
   type Followup {
     id: ID!
     gymUuid: String!
-    member: Member!
+    member: Member
     trainer: Trainer
     type: String!
     title: String!
@@ -311,16 +327,24 @@ const typeDefs = `#graphql
     updatedAt: String!
   }
 
+  type FollowupStats {
+    total: Int!
+    pending: Int!
+    completed: Int!
+    highPriority: Int!
+  }
+
   type FollowupList {
     followups: [Followup!]!
     total: Int!
     page: Int!
     limit: Int!
     totalPages: Int!
+    stats: FollowupStats
   }
 
   input FollowupInput {
-    member: ID!
+    member: ID
     trainer: ID
     type: String
     title: String!
@@ -394,12 +418,20 @@ const typeDefs = `#graphql
     updatedAt: String!
   }
 
+  type ResourceStats {
+    total: Int!
+    available: Int!
+    maintenance: Int!
+    outOfOrder: Int!
+  }
+
   type ResourceList {
     resources: [Resource!]!
     total: Int!
     page: Int!
     limit: Int!
     totalPages: Int!
+    stats: ResourceStats
   }
 
   input WarrantyInput {
@@ -458,6 +490,83 @@ const typeDefs = `#graphql
     search: String
   }
 
+  # Event Types
+  type Event {
+    id: ID!
+    gymUuid: String!
+    title: String!
+    description: String
+    type: String!
+    startDate: String!
+    endDate: String!
+    location: String
+    maxParticipants: Int!
+    currentParticipants: Int!
+    fee: Float!
+    status: String!
+    trainer: Trainer
+    image: String
+    notes: String
+    createdAt: String!
+    updatedAt: String!
+  }
+
+  type EventStats {
+    total: Int!
+    upcoming: Int!
+    ongoing: Int!
+    totalParticipants: Int!
+  }
+
+  type EventList {
+    events: [Event!]!
+    total: Int!
+    page: Int!
+    limit: Int!
+    totalPages: Int!
+    stats: EventStats
+  }
+
+  input EventInput {
+    title: String!
+    description: String
+    type: String
+    startDate: String!
+    endDate: String!
+    location: String
+    maxParticipants: Int
+    currentParticipants: Int
+    fee: Float
+    status: String
+    trainer: ID
+    image: String
+    notes: String
+  }
+
+  input EventUpdateInput {
+    title: String
+    description: String
+    type: String
+    startDate: String
+    endDate: String
+    location: String
+    maxParticipants: Int
+    currentParticipants: Int
+    fee: Float
+    status: String
+    trainer: ID
+    image: String
+    notes: String
+  }
+
+  input EventFilterInput {
+    type: String
+    status: String
+    startDate: String
+    endDate: String
+    search: String
+  }
+
   # Pagination Input
   input PaginationInput {
     page: Int
@@ -489,6 +598,12 @@ const typeDefs = `#graphql
     resource(id: ID!): Resource
     resources(filter: ResourceFilterInput, pagination: PaginationInput): ResourceList!
     resourcesCount: Int!
+
+    # Event Queries
+    event(id: ID!): Event
+    events(filter: EventFilterInput, pagination: PaginationInput): EventList!
+    eventsCount: Int!
+    upcomingEvents(days: Int): [Event!]!
   }
 
   type Mutation {
@@ -525,6 +640,11 @@ const typeDefs = `#graphql
     createResource(input: ResourceInput!): Resource!
     updateResource(id: ID!, input: ResourceUpdateInput!): Resource!
     deleteResource(id: ID!): Boolean!
+
+    # Event Mutations
+    createEvent(input: EventInput!): Event!
+    updateEvent(id: ID!, input: EventUpdateInput!): Event!
+    deleteEvent(id: ID!): Boolean!
   }
 `;
 

@@ -94,6 +94,12 @@ export function TrainersPage() {
   const [showModal, setShowModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedMember, setSelectedMember] = useState<TeamMemberData | null>(null);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [searchTerm, setSearchTerm] = useState('');
+
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -111,7 +117,10 @@ export function TrainersPage() {
   });
 
   const { data, loading, error, refetch } = useQuery(GET_TEAM_MEMBERS, {
-    variables: { pagination: { page: 1, limit: 100 } },
+    variables: {
+      filter: searchTerm ? { search: searchTerm } : null,
+      pagination: { page: currentPage, limit: pageSize },
+    },
     fetchPolicy: 'network-only',
   });
 
@@ -150,9 +159,19 @@ export function TrainersPage() {
   });
 
   const teamMembers: TeamMemberData[] = data?.trainers?.trainers || [];
-  const activeMembers = teamMembers.filter((t) => t.status === 'active').length;
-  const totalSalary = teamMembers.filter((t) => t.status === 'active').reduce((sum, t) => sum + (t.salary || 0), 0);
-  const trainersCount = teamMembers.filter((t) => t.role === 'trainer').length;
+  const totalTeamMembers = data?.trainers?.total || 0;
+  
+  // Use stats from server for widgets (all records, not just paginated)
+  const stats = data?.trainers?.stats;
+  const activeMembers = stats?.active || 0;
+  const totalSalary = stats?.totalSalary || 0;
+  const trainersCount = stats?.trainers || 0;
+  const totalTeam = stats?.total || 0;
+
+  // Pagination handlers
+  const handlePageChange = (page: number) => setCurrentPage(page);
+  const handlePageSizeChange = (size: number) => { setPageSize(size); setCurrentPage(1); };
+  const handleSearchChange = (search: string) => { setSearchTerm(search); setCurrentPage(1); };
 
   const columns = [
     {
@@ -677,7 +696,7 @@ export function TrainersPage() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <Widget
             title="Total Team"
-            value={teamMembers.length}
+            value={totalTeam}
             icon={Users}
             color="purple"
           />
@@ -717,6 +736,14 @@ export function TrainersPage() {
           onDownload={handleDownload}
           onRowClick={handleRowClick}
           emptyMessage="No team members found"
+          serverSidePagination={true}
+          totalItems={totalTeamMembers}
+          currentPage={currentPage}
+          onPageChange={handlePageChange}
+          onPageSizeChange={handlePageSizeChange}
+          onSearchChange={handleSearchChange}
+          pageSize={pageSize}
+          pageSizeOptions={[10, 25, 50, 100]}
         />
 
         <Modal

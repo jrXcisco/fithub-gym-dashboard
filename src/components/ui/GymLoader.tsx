@@ -108,55 +108,26 @@ export function GymLoader({ fullScreen = true }: GymLoaderProps) {
         <div className="flex flex-col items-center gap-3">
           <span className="text-white font-bold text-xl tracking-wide">Loading</span>
           
-          {/* Thunder/Lightning Progress */}
-          <div className="relative w-40 h-10">
+          {/* Simple dots animation */}
+          <div className="flex gap-2">
             <style>{`
-              @keyframes thunder-fill {
-                0% { clip-path: inset(0 100% 0 0); }
-                100% { clip-path: inset(0 0% 0 0); }
-              }
-              @keyframes thunder-glow {
-                0%, 100% { filter: drop-shadow(0 0 2px #FBBF24); }
-                50% { filter: drop-shadow(0 0 8px #FBBF24) drop-shadow(0 0 15px #F59E0B); }
+              @keyframes bounce-dot {
+                0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
+                40% { transform: scale(1.2); opacity: 1; }
               }
             `}</style>
-            
-            {/* Background thunder (gray) */}
-            <svg viewBox="0 0 80 40" className="absolute inset-0 w-full h-full">
-              <path 
-                d="M5 20 L20 5 L25 15 L40 0 L35 18 L50 8 L42 22 L55 15 L48 28 L65 18 L55 32 L75 25"
-                fill="none"
-                stroke="#4B5563"
-                strokeWidth="3"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-            
-            {/* Foreground thunder (yellow - animated fill) */}
-            <svg 
-              viewBox="0 0 80 40" 
-              className="absolute inset-0 w-full h-full"
-              style={{ 
-                animation: 'thunder-fill 1.5s ease-in-out infinite, thunder-glow 1.5s ease-in-out infinite'
-              }}
-            >
-              <path 
-                d="M5 20 L20 5 L25 15 L40 0 L35 18 L50 8 L42 22 L55 15 L48 28 L65 18 L55 32 L75 25"
-                fill="none"
-                stroke="url(#thunderGradient)"
-                strokeWidth="3"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <defs>
-                <linearGradient id="thunderGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="#FCD34D" />
-                  <stop offset="50%" stopColor="#FBBF24" />
-                  <stop offset="100%" stopColor="#F59E0B" />
-                </linearGradient>
-              </defs>
-            </svg>
+            <div 
+              className="w-3 h-3 bg-purple-400 rounded-full"
+              style={{ animation: 'bounce-dot 1.4s ease-in-out infinite', animationDelay: '0s' }}
+            />
+            <div 
+              className="w-3 h-3 bg-purple-400 rounded-full"
+              style={{ animation: 'bounce-dot 1.4s ease-in-out infinite', animationDelay: '0.2s' }}
+            />
+            <div 
+              className="w-3 h-3 bg-purple-400 rounded-full"
+              style={{ animation: 'bounce-dot 1.4s ease-in-out infinite', animationDelay: '0.4s' }}
+            />
           </div>
         </div>
       </div>
