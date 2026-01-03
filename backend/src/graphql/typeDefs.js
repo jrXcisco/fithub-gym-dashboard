@@ -194,6 +194,7 @@ const typeDefs = `#graphql
   input MemberFilterInput {
     status: String
     membershipType: String
+    fitnessGoal: String
     assignedTrainer: ID
     search: String
   }
@@ -305,6 +306,7 @@ const typeDefs = `#graphql
     role: String
     specialization: String
     search: String
+    dayPresent: String
   }
 
   # Followup Types
@@ -582,28 +584,33 @@ const typeDefs = `#graphql
     member(id: ID!): Member
     members(filter: MemberFilterInput, pagination: PaginationInput): MemberList!
     membersCount: Int!
+    memberSearchSuggestions(search: String!, limit: Int): [Member!]!
 
     # Trainer Queries
     trainer(id: ID!): Trainer
     trainers(filter: TrainerFilterInput, pagination: PaginationInput): TrainerList!
     trainersCount: Int!
+    teamSearchSuggestions(search: String!, limit: Int): [Trainer!]!
 
     # Followup Queries
     followup(id: ID!): Followup
     followups(filter: FollowupFilterInput, pagination: PaginationInput): FollowupList!
     followupsCount: Int!
     upcomingFollowups(days: Int): [Followup!]!
+    followupSearchSuggestions(search: String!, limit: Int): [Followup!]!
 
     # Resource Queries
     resource(id: ID!): Resource
     resources(filter: ResourceFilterInput, pagination: PaginationInput): ResourceList!
     resourcesCount: Int!
+    resourceSearchSuggestions(search: String!, limit: Int): [Resource!]!
 
     # Event Queries
     event(id: ID!): Event
     events(filter: EventFilterInput, pagination: PaginationInput): EventList!
     eventsCount: Int!
     upcomingEvents(days: Int): [Event!]!
+    eventSearchSuggestions(search: String!, limit: Int): [Event!]!
   }
 
   type Mutation {

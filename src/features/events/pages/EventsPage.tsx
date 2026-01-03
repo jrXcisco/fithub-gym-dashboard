@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@apollo/client';
 import {
   Calendar,
@@ -15,7 +16,9 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { Header } from '../../../components/layout';
-import { Widget, DataTable, Button, Modal, Input, Select, Textarea } from '../../../components/ui';
+import { Widget, DataTable, Button, Modal, Input, Select, Textarea, FilterMenu } from '../../../components/ui';
+import type { FilterField } from '../../../components/ui';
+import { EventSearchSuggestions } from '../../../components/ui/EventSearchSuggestions';
 import { formatDate, formatCurrency, getStatusColor, downloadAsCSV } from '../../../lib/utils';
 import { GET_EVENTS, CREATE_EVENT, UPDATE_EVENT, DELETE_EVENT } from '../../../graphql/events';
 import { GET_TEAM_MEMBERS } from '../../../graphql/team';
@@ -59,15 +62,48 @@ interface EventData {
 }
 
 export function EventsPage() {
+  const navigate = useNavigate();
   const [showModal, setShowModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<EventData | null>(null);
-  const [statusFilter, setStatusFilter] = useState('all');
+  
+  // Filter state
+  const [filters, setFilters] = useState<Record<string, string>>({
+    status: 'all',
+    type: 'all',
+  });
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Filter fields configuration
+  const filterFields: FilterField[] = [
+    {
+      key: 'status',
+      label: 'Status',
+      options: [
+        { label: 'All Status', value: 'all' },
+        { label: 'Upcoming', value: 'upcoming' },
+        { label: 'Ongoing', value: 'ongoing' },
+        { label: 'Completed', value: 'completed' },
+        { label: 'Cancelled', value: 'cancelled' },
+      ],
+    },
+    {
+      key: 'type',
+      label: 'Type',
+      options: [
+        { label: 'All Types', value: 'all' },
+        { label: 'Workshop', value: 'workshop' },
+        { label: 'Competition', value: 'competition' },
+        { label: 'Seminar', value: 'seminar' },
+        { label: 'Camp', value: 'camp' },
+        { label: 'Other', value: 'other' },
+      ],
+    },
+  ];
 
   const [formData, setFormData] = useState({
     title: '',
@@ -104,7 +140,8 @@ export function EventsPage() {
   const { data, loading, error, refetch } = useQuery(GET_EVENTS, {
     variables: {
       filter: {
-        ...(statusFilter !== 'all' ? { status: statusFilter } : {}),
+        ...(filters.status !== 'all' ? { status: filters.status } : {}),
+        ...(filters.type !== 'all' ? { type: filters.type } : {}),
         ...(searchTerm ? { search: searchTerm } : {}),
       },
       pagination: { page: currentPage, limit: pageSize },
@@ -164,6 +201,7 @@ export function EventsPage() {
   const handlePageChange = (page: number) => setCurrentPage(page);
   const handlePageSizeChange = (size: number) => { setPageSize(size); setCurrentPage(1); };
   const handleSearchChange = (search: string) => { setSearchTerm(search); setCurrentPage(1); };
+  const handleFilterChange = (newFilters: Record<string, string>) => { setFilters(newFilters); setCurrentPage(1); };
 
   const trainerOptions = [
     { label: 'No Trainer', value: '' },
@@ -273,8 +311,14 @@ export function EventsPage() {
     );
   }
 
+  // Check if any filters are applied
+  const hasActiveFilters = Object.values(filters).some(v => v && v !== 'all') || searchTerm;
+  
+  // Check if this is truly empty (no events at all) vs filtered results empty
+  const isTrulyEmpty = (stats?.total === 0 || stats?.total === undefined) && !hasActiveFilters;
+
   // Empty state - no events yet
-  if (events.length === 0 && statusFilter === 'all') {
+  if (events.length === 0 && isTrulyEmpty) {
     return (
       <div>
         <Header
@@ -552,20 +596,6 @@ export function EventsPage() {
     },
   ];
 
-  const filterComponent = (
-    <div className="flex gap-4">
-      <Select
-        label="Status"
-        options={[
-          { label: 'All Status', value: 'all' },
-          ...statusOptions,
-        ]}
-        value={statusFilter}
-        onChange={(e) => setStatusFilter(e.target.value)}
-      />
-    </div>
-  );
-
   return (
     <div>
       <Header
@@ -594,22 +624,35 @@ export function EventsPage() {
           />
         </div>
 
-        <div className="flex justify-end mb-6">
-          <Button
-            leftIcon={<Plus className="w-4 h-4" />}
-            onClick={() => setShowModal(true)}
-          >
-            Add Event
-          </Button>
+        <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-6">
+          <EventSearchSuggestions
+            placeholder="Search events by name..."
+            onSelect={(event) => navigate(`/dashboard/events/${event.id}`)}
+            onSearch={handleSearchChange}
+            className="flex-1 max-w-md"
+          />
+          <div className="flex gap-3 items-center">
+            <FilterMenu
+              fields={filterFields}
+              appliedFilters={filters}
+              onFilterChange={handleFilterChange}
+            />
+            <Button
+              leftIcon={<Plus className="w-4 h-4" />}
+              onClick={() => setShowModal(true)}
+            >
+              Add Event
+            </Button>
+          </div>
         </div>
 
         <DataTable
           data={events}
           columns={columns}
-          searchPlaceholder="Search events..."
           onDownload={handleDownload}
-          filterComponent={filterComponent}
+          onRowClick={(event) => navigate(`/dashboard/events/${event.id}`)}
           emptyMessage="No events found"
+          hideSearch={true}
           serverSidePagination={true}
           totalItems={totalEvents}
           currentPage={currentPage}

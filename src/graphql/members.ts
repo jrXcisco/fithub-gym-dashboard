@@ -204,3 +204,17 @@ export const ADD_PAYMENT = gql`
     }
   }
 `;
+
+export const SEARCH_MEMBER_SUGGESTIONS = gql`
+  query SearchMemberSuggestions($search: String!, $limit: Int) {
+    memberSearchSuggestions(search: $search, limit: $limit) {
+      id
+      firstName
+      lastName
+      email
+      phone
+      status
+      membershipType
+    }
+  }
+`;

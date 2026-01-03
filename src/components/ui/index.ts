@@ -8,3 +8,6 @@ export { Widget } from './Widget';
 export { DataTable } from './DataTable';
 export { Textarea } from './Textarea';
 export { GymLoader } from './GymLoader';
+export { SearchSuggestions } from './SearchSuggestions';
+export { FilterMenu } from './FilterMenu';
+export type { FilterField, FilterOption, AppliedFilter } from './FilterMenu';

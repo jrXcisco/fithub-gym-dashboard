@@ -15,7 +15,9 @@ import {
   ShoppingBag,
 } from 'lucide-react';
 import { Header } from '../../../components/layout';
-import { Widget, DataTable, Button, Modal, Input, Select, Textarea } from '../../../components/ui';
+import { Widget, DataTable, Button, Modal, Input, Select, Textarea, FilterMenu } from '../../../components/ui';
+import type { FilterField } from '../../../components/ui';
+import { ResourceSearchSuggestions } from '../../../components/ui/ResourceSearchSuggestions';
 import { formatDate, formatCurrency, getStatusColor, downloadAsCSV } from '../../../lib/utils';
 import { GET_RESOURCES, CREATE_RESOURCE, UPDATE_RESOURCE, DELETE_RESOURCE } from '../../../graphql/resources';
 
@@ -69,12 +71,44 @@ export function ResourcesPage() {
   const [showModal, setShowModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedResource, setSelectedResource] = useState<ResourceData | null>(null);
-  const [statusFilter, setStatusFilter] = useState('all');
+  
+  // Filter state
+  const [filters, setFilters] = useState<Record<string, string>>({
+    category: 'all',
+    status: 'all',
+  });
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Filter fields configuration
+  const filterFields: FilterField[] = [
+    {
+      key: 'category',
+      label: 'Category',
+      options: [
+        { label: 'All Categories', value: 'all' },
+        { label: 'Equipment', value: 'equipment' },
+        { label: 'Facility', value: 'facility' },
+        { label: 'Consumable', value: 'consumable' },
+        { label: 'Other', value: 'other' },
+      ],
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      options: [
+        { label: 'All Status', value: 'all' },
+        { label: 'Available', value: 'available' },
+        { label: 'In Use', value: 'in_use' },
+        { label: 'Maintenance', value: 'maintenance' },
+        { label: 'Out of Order', value: 'out_of_order' },
+        { label: 'Retired', value: 'retired' },
+      ],
+    },
+  ];
 
   const [formData, setFormData] = useState({
     name: '',
@@ -100,7 +134,8 @@ export function ResourcesPage() {
   const { data, loading, error, refetch } = useQuery(GET_RESOURCES, {
     variables: {
       filter: {
-        ...(statusFilter !== 'all' ? { status: statusFilter } : {}),
+        ...(filters.category !== 'all' ? { category: filters.category } : {}),
+        ...(filters.status !== 'all' ? { status: filters.status } : {}),
         ...(searchTerm ? { search: searchTerm } : {}),
       },
       pagination: { page: currentPage, limit: pageSize },
@@ -156,6 +191,7 @@ export function ResourcesPage() {
   const handlePageChange = (page: number) => setCurrentPage(page);
   const handlePageSizeChange = (size: number) => { setPageSize(size); setCurrentPage(1); };
   const handleSearchChange = (search: string) => { setSearchTerm(search); setCurrentPage(1); };
+  const handleFilterChange = (newFilters: Record<string, string>) => { setFilters(newFilters); setCurrentPage(1); };
 
   const columns = [
     {
@@ -377,20 +413,6 @@ export function ResourcesPage() {
     ]);
   };
 
-  const filterComponent = (
-    <div className="flex gap-4">
-      <Select
-        label="Status"
-        options={[
-          { label: 'All Status', value: 'all' },
-          ...statusOptions,
-        ]}
-        value={statusFilter}
-        onChange={(e) => setStatusFilter(e.target.value)}
-      />
-    </div>
-  );
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -424,8 +446,14 @@ export function ResourcesPage() {
     );
   }
 
+  // Check if any filters are applied
+  const hasActiveFilters = Object.values(filters).some(v => v && v !== 'all') || searchTerm;
+  
+  // Check if this is truly empty (no resources at all) vs filtered results empty
+  const isTrulyEmpty = (stats?.total === 0 || stats?.total === undefined) && !hasActiveFilters;
+
   // Empty state - no resources yet
-  if (resources.length === 0 && statusFilter === 'all') {
+  if (resources.length === 0 && isTrulyEmpty) {
     return (
       <div>
         <Header
@@ -696,23 +724,35 @@ export function ResourcesPage() {
           />
         </div>
 
-        <div className="flex justify-end mb-6">
-          <Button
-            leftIcon={<Plus className="w-4 h-4" />}
-            onClick={() => setShowModal(true)}
-          >
-            Add Resource
-          </Button>
+        <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-6">
+          <ResourceSearchSuggestions
+            placeholder="Search resources by name..."
+            onSelect={(resource) => navigate(`/dashboard/resources/${resource.id}`)}
+            onSearch={handleSearchChange}
+            className="flex-1 max-w-md"
+          />
+          <div className="flex gap-3 items-center">
+            <FilterMenu
+              fields={filterFields}
+              appliedFilters={filters}
+              onFilterChange={handleFilterChange}
+            />
+            <Button
+              leftIcon={<Plus className="w-4 h-4" />}
+              onClick={() => setShowModal(true)}
+            >
+              Add Resource
+            </Button>
+          </div>
         </div>
 
         <DataTable
           data={resources}
           columns={columns}
-          searchPlaceholder="Search resources..."
           onDownload={handleDownload}
           onRowClick={handleRowClick}
-          filterComponent={filterComponent}
           emptyMessage="No resources found"
+          hideSearch={true}
           serverSidePagination={true}
           totalItems={totalResources}
           currentPage={currentPage}

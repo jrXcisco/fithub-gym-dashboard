@@ -14,11 +14,12 @@ import {
   Trash2,
 } from 'lucide-react';
 import { Header } from '../../../components/layout';
-import { Widget, DataTable, Button, Modal, Select } from '../../../components/ui';
+import { Widget, DataTable, Button, Modal, SearchSuggestions, FilterMenu } from '../../../components/ui';
+import type { FilterField } from '../../../components/ui';
 import { MemberForm } from '../components/MemberForm';
 import { BulkUpload } from '../components/BulkUpload';
 import { formatDate, getStatusColor } from '../../../lib/utils';
-import { GET_MEMBERS, CREATE_MEMBER, UPDATE_MEMBER, DELETE_MEMBER } from '../../../graphql/members';
+import { GET_MEMBERS, CREATE_MEMBER, UPDATE_MEMBER, DELETE_MEMBER, SEARCH_MEMBER_SUGGESTIONS } from '../../../graphql/members';
 import type { MemberStatus, PaymentMethod, PaymentStatus, WorkoutGoal } from '../../../types';
 
 interface EmergencyContact {
@@ -86,17 +87,62 @@ export function MembersListPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedMember, setSelectedMember] = useState<MemberData | null>(null);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
-  const [statusFilter, setStatusFilter] = useState('all');
+  // Filter state
+  const [filters, setFilters] = useState<Record<string, string>>({
+    status: 'all',
+    fitnessGoal: 'all',
+    membershipType: 'all',
+  });
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
 
+  // Filter fields configuration
+  const filterFields: FilterField[] = [
+    {
+      key: 'status',
+      label: 'Status',
+      options: [
+        { label: 'All Status', value: 'all' },
+        { label: 'Active', value: 'active' },
+        { label: 'Inactive', value: 'inactive' },
+        { label: 'Expired', value: 'expired' },
+        { label: 'Pending', value: 'pending' },
+      ],
+    },
+    {
+      key: 'fitnessGoal',
+      label: 'Fitness Goal',
+      options: [
+        { label: 'All Goals', value: 'all' },
+        { label: 'Weight Loss', value: 'weight_loss' },
+        { label: 'Muscle Gain', value: 'muscle_gain' },
+        { label: 'General Fitness', value: 'general_fitness' },
+        { label: 'Strength Training', value: 'strength' },
+        { label: 'Cardio', value: 'cardio' },
+      ],
+    },
+    {
+      key: 'membershipType',
+      label: 'Plan',
+      options: [
+        { label: 'All Plans', value: 'all' },
+        { label: 'Basic', value: 'basic' },
+        { label: 'Standard', value: 'standard' },
+        { label: 'Premium', value: 'premium' },
+        { label: 'VIP', value: 'vip' },
+      ],
+    },
+  ];
+
   const { data, loading, error, refetch } = useQuery(GET_MEMBERS, {
     variables: {
       filter: {
-        ...(statusFilter !== 'all' ? { status: statusFilter } : {}),
+        ...(filters.status !== 'all' ? { status: filters.status } : {}),
+        ...(filters.fitnessGoal !== 'all' ? { fitnessGoal: filters.fitnessGoal } : {}),
+        ...(filters.membershipType !== 'all' ? { membershipType: filters.membershipType } : {}),
         ...(searchTerm ? { search: searchTerm } : {}),
       },
       pagination: { page: currentPage, limit: pageSize },
@@ -331,8 +377,14 @@ export function MembersListPage() {
     setCurrentPage(1); // Reset to first page when searching
   };
 
-  // Empty state - no members yet
-  if (members.length === 0) {
+  // Check if any filters are applied
+  const hasActiveFilters = Object.values(filters).some(v => v && v !== 'all') || searchTerm;
+  
+  // Check if this is truly empty (no members at all) vs filtered results empty
+  const isTrulyEmpty = (stats?.total === 0 || stats?.total === undefined) && !hasActiveFilters;
+
+  // Empty state - no members yet (only show when no filters applied and truly no members)
+  if (members.length === 0 && isTrulyEmpty) {
     return (
       <div>
         <Header
@@ -540,22 +592,10 @@ export function MembersListPage() {
     URL.revokeObjectURL(url);
   };
 
-  const filterComponent = (
-    <div className="flex gap-4">
-      <Select
-        label="Status"
-        options={[
-          { label: 'All Status', value: 'all' },
-          { label: 'Active', value: 'active' },
-          { label: 'Inactive', value: 'inactive' },
-          { label: 'Expired', value: 'expired' },
-          { label: 'Pending', value: 'pending' },
-        ]}
-        value={statusFilter}
-        onChange={(e) => setStatusFilter(e.target.value)}
-      />
-    </div>
-  );
+  const handleFilterChange = (newFilters: Record<string, string>) => {
+    setFilters(newFilters);
+    setCurrentPage(1);
+  };
 
   // Normal view with members
   return (
@@ -592,30 +632,43 @@ export function MembersListPage() {
           />
         </div>
 
-        <div className="flex justify-end gap-3 mb-6">
-          <Button
-            variant="secondary"
-            leftIcon={<Upload className="w-4 h-4" />}
-            onClick={() => setShowBulkUpload(true)}
-          >
-            Bulk Upload
-          </Button>
-          <Button
-            leftIcon={<Plus className="w-4 h-4" />}
-            onClick={() => setShowAddModal(true)}
-          >
-            Add Member
-          </Button>
+        <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-4">
+          <SearchSuggestions
+            query={SEARCH_MEMBER_SUGGESTIONS}
+            placeholder="Search by name or phone..."
+            onSelect={(member) => navigate(`/dashboard/members/${member.id}`)}
+            onSearch={handleSearchChange}
+            className="flex-1 max-w-md"
+          />
+          <div className="flex gap-3 items-center">
+            <FilterMenu
+              fields={filterFields}
+              appliedFilters={filters}
+              onFilterChange={handleFilterChange}
+            />
+            <Button
+              variant="secondary"
+              leftIcon={<Upload className="w-4 h-4" />}
+              onClick={() => setShowBulkUpload(true)}
+            >
+              Bulk Upload
+            </Button>
+            <Button
+              leftIcon={<Plus className="w-4 h-4" />}
+              onClick={() => setShowAddModal(true)}
+            >
+              Add Member
+            </Button>
+          </div>
         </div>
 
         <DataTable
           data={members}
           columns={columns}
           onRowClick={handleRowClick}
-          searchPlaceholder="Search members..."
           onDownload={handleDownload}
-          filterComponent={filterComponent}
           emptyMessage="No members found"
+          hideSearch={true}
           serverSidePagination={true}
           totalItems={totalMembers}
           currentPage={currentPage}

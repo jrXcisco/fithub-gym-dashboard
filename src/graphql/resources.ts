@@ -167,3 +167,16 @@ export const DELETE_RESOURCE = gql`
     deleteResource(id: $id)
   }
 `;
+
+export const SEARCH_RESOURCE_SUGGESTIONS = gql`
+  query SearchResourceSuggestions($search: String!, $limit: Int) {
+    resourceSearchSuggestions(search: $search, limit: $limit) {
+      id
+      name
+      category
+      status
+      quantity
+      location
+    }
+  }
+`;

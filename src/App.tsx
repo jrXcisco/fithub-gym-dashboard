@@ -6,7 +6,7 @@ import { DashboardPage } from './features/dashboard';
 import { MembersListPage, MemberDetailPage } from './features/members';
 import { TrainersPage, TeamDetailPage } from './features/trainers';
 import { FollowUpsPage, FollowupDetailPage } from './features/followups';
-import { EventsPage } from './features/events';
+import { EventsPage, EventDetailPage } from './features/events';
 import { ResourcesPage, ResourceDetailPage } from './features/resources';
 import { LoginPage, SignupPage } from './features/auth';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
@@ -40,6 +40,7 @@ function App() {
           <Route path="follow-ups" element={<FollowUpsPage />} />
           <Route path="follow-ups/:id" element={<FollowupDetailPage />} />
           <Route path="events" element={<EventsPage />} />
+          <Route path="events/:id" element={<EventDetailPage />} />
           <Route path="resources" element={<ResourcesPage />} />
           <Route path="resources/:id" element={<ResourceDetailPage />} />
         </Route>

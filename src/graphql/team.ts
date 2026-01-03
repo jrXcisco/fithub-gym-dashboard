@@ -167,3 +167,20 @@ export const DELETE_TEAM_MEMBER = gql`
     deleteTrainer(id: $id)
   }
 `;
+
+export const SEARCH_TEAM_SUGGESTIONS = gql`
+  query SearchTeamSuggestions($search: String!, $limit: Int) {
+    teamSearchSuggestions(search: $search, limit: $limit) {
+      id
+      firstName
+      lastName
+      email
+      phone
+      role
+      status
+      availability {
+        days
+      }
+    }
+  }
+`;

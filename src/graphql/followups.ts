@@ -191,3 +191,21 @@ export const COMPLETE_FOLLOWUP = gql`
     }
   }
 `;
+
+export const SEARCH_FOLLOWUP_SUGGESTIONS = gql`
+  query SearchFollowupSuggestions($search: String!, $limit: Int) {
+    followupSearchSuggestions(search: $search, limit: $limit) {
+      id
+      title
+      type
+      status
+      priority
+      scheduledDate
+      member {
+        id
+        firstName
+        lastName
+      }
+    }
+  }
+`;

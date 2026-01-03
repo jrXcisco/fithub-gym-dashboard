@@ -15,7 +15,9 @@ import {
   MessageSquare,
 } from 'lucide-react';
 import { Header } from '../../../components/layout';
-import { Widget, DataTable, Button, Modal, Input, Select, Textarea } from '../../../components/ui';
+import { Widget, DataTable, Button, Modal, Input, Select, Textarea, FilterMenu } from '../../../components/ui';
+import type { FilterField } from '../../../components/ui';
+import { FollowupSearchSuggestions } from '../../../components/ui/FollowupSearchSuggestions';
 import { formatDate, getStatusColor, getPriorityColor, downloadAsCSV } from '../../../lib/utils';
 import { GET_FOLLOWUPS, CREATE_FOLLOWUP, UPDATE_FOLLOWUP, DELETE_FOLLOWUP, COMPLETE_FOLLOWUP } from '../../../graphql/followups';
 import { GET_MEMBERS } from '../../../graphql/members';
@@ -72,12 +74,54 @@ export function FollowUpsPage() {
   const [showModal, setShowModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedFollowUp, setSelectedFollowUp] = useState<FollowupData | null>(null);
-  const [statusFilter, setStatusFilter] = useState('all');
+  
+  // Filter state
+  const [filters, setFilters] = useState<Record<string, string>>({
+    type: 'all',
+    priority: 'all',
+    status: 'all',
+  });
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Filter fields configuration
+  const filterFields: FilterField[] = [
+    {
+      key: 'type',
+      label: 'Type',
+      options: [
+        { label: 'All Types', value: 'all' },
+        { label: 'Renewal', value: 'renewal' },
+        { label: 'Feedback', value: 'feedback' },
+        { label: 'Complaint', value: 'complaint' },
+        { label: 'Inquiry', value: 'inquiry' },
+        { label: 'General', value: 'general' },
+      ],
+    },
+    {
+      key: 'priority',
+      label: 'Priority',
+      options: [
+        { label: 'All Priorities', value: 'all' },
+        { label: 'High', value: 'high' },
+        { label: 'Medium', value: 'medium' },
+        { label: 'Low', value: 'low' },
+      ],
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      options: [
+        { label: 'All Status', value: 'all' },
+        { label: 'Pending', value: 'pending' },
+        { label: 'Completed', value: 'completed' },
+        { label: 'Cancelled', value: 'cancelled' },
+      ],
+    },
+  ];
 
   const [formData, setFormData] = useState({
     title: '',
@@ -94,7 +138,9 @@ export function FollowUpsPage() {
   const { data, loading, error, refetch } = useQuery(GET_FOLLOWUPS, {
     variables: {
       filter: {
-        ...(statusFilter !== 'all' ? { status: statusFilter } : {}),
+        ...(filters.type !== 'all' ? { type: filters.type } : {}),
+        ...(filters.priority !== 'all' ? { priority: filters.priority } : {}),
+        ...(filters.status !== 'all' ? { status: filters.status } : {}),
         ...(searchTerm ? { search: searchTerm } : {}),
       },
       pagination: { page: currentPage, limit: pageSize },
@@ -169,6 +215,7 @@ export function FollowUpsPage() {
   const handlePageChange = (page: number) => setCurrentPage(page);
   const handlePageSizeChange = (size: number) => { setPageSize(size); setCurrentPage(1); };
   const handleSearchChange = (search: string) => { setSearchTerm(search); setCurrentPage(1); };
+  const handleFilterChange = (newFilters: Record<string, string>) => { setFilters(newFilters); setCurrentPage(1); };
 
   const memberOptions = members.map((m: any) => ({
     label: `${m.firstName} ${m.lastName}`,
@@ -395,20 +442,6 @@ export function FollowUpsPage() {
     ]);
   };
 
-  const filterComponent = (
-    <div className="flex gap-4">
-      <Select
-        label="Status"
-        options={[
-          { label: 'All Status', value: 'all' },
-          ...statusOptions,
-        ]}
-        value={statusFilter}
-        onChange={(e) => setStatusFilter(e.target.value)}
-      />
-    </div>
-  );
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -442,8 +475,14 @@ export function FollowUpsPage() {
     );
   }
 
+  // Check if any filters are applied
+  const hasActiveFilters = Object.values(filters).some(v => v && v !== 'all') || searchTerm;
+  
+  // Check if this is truly empty (no follow-ups at all) vs filtered results empty
+  const isTrulyEmpty = (stats?.total === 0 || stats?.total === undefined) && !hasActiveFilters;
+
   // Empty state - no follow-ups yet
-  if (followUps.length === 0 && statusFilter === 'all') {
+  if (followUps.length === 0 && isTrulyEmpty) {
     return (
       <div>
         <Header
@@ -642,23 +681,35 @@ export function FollowUpsPage() {
           />
         </div>
 
-        <div className="flex justify-end mb-6">
-          <Button
-            leftIcon={<Plus className="w-4 h-4" />}
-            onClick={() => setShowModal(true)}
-          >
-            Add Follow-up
-          </Button>
+        <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-6">
+          <FollowupSearchSuggestions
+            placeholder="Search by member name..."
+            onSelect={(followup) => navigate(`/dashboard/followups/${followup.id}`)}
+            onSearch={handleSearchChange}
+            className="flex-1 max-w-md"
+          />
+          <div className="flex gap-3 items-center">
+            <FilterMenu
+              fields={filterFields}
+              appliedFilters={filters}
+              onFilterChange={handleFilterChange}
+            />
+            <Button
+              leftIcon={<Plus className="w-4 h-4" />}
+              onClick={() => setShowModal(true)}
+            >
+              Add Follow-up
+            </Button>
+          </div>
         </div>
 
         <DataTable
           data={followUps}
           columns={columns}
-          searchPlaceholder="Search follow-ups..."
           onDownload={handleDownload}
           onRowClick={handleRowClick}
-          filterComponent={filterComponent}
           emptyMessage="No follow-ups found"
+          hideSearch={true}
           serverSidePagination={true}
           totalItems={totalFollowUps}
           currentPage={currentPage}

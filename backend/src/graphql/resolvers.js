@@ -63,6 +63,7 @@ const resolvers = {
 
       if (safeFilter.status) query.status = safeFilter.status;
       if (safeFilter.membershipType) query.membershipType = safeFilter.membershipType;
+      if (safeFilter.fitnessGoal) query['workoutProgram.goal'] = safeFilter.fitnessGoal;
       if (safeFilter.assignedTrainer) query.assignedTrainer = safeFilter.assignedTrainer;
       if (safeFilter.search) {
         query.$or = [
@@ -102,6 +103,23 @@ const resolvers = {
       return await Member.countDocuments({ gymUuid });
     },
 
+    memberSearchSuggestions: async (_, { search, limit = 10 }, { user }) => {
+      const gymUuid = await getGymUuid(user);
+      if (!search || search.length < 2) return [];
+      
+      const query = {
+        gymUuid,
+        $or: [
+          { firstName: { $regex: search, $options: 'i' } },
+          { lastName: { $regex: search, $options: 'i' } },
+          { phone: { $regex: search, $options: 'i' } },
+          { email: { $regex: search, $options: 'i' } },
+        ],
+      };
+      
+      return await Member.find(query).limit(limit).sort({ firstName: 1 });
+    },
+
     // Trainer Queries
     trainer: async (_, { id }, { user }) => {
       const gymUuid = await getGymUuid(user);
@@ -124,6 +142,7 @@ const resolvers = {
       if (safeFilter.status) query.status = safeFilter.status;
       if (safeFilter.role) query.role = safeFilter.role;
       if (safeFilter.specialization) query.specializations = safeFilter.specialization;
+      if (safeFilter.dayPresent) query['availability.days'] = safeFilter.dayPresent;
       if (safeFilter.search) {
         query.$or = [
           { firstName: { $regex: safeFilter.search, $options: 'i' } },
@@ -156,6 +175,23 @@ const resolvers = {
           totalSalary,
         },
       };
+    },
+
+    teamSearchSuggestions: async (_, { search, limit = 10 }, { user }) => {
+      const gymUuid = await getGymUuid(user);
+      if (!search || search.length < 2) return [];
+      
+      const query = {
+        gymUuid,
+        $or: [
+          { firstName: { $regex: search, $options: 'i' } },
+          { lastName: { $regex: search, $options: 'i' } },
+          { phone: { $regex: search, $options: 'i' } },
+          { email: { $regex: search, $options: 'i' } },
+        ],
+      };
+      
+      return await Trainer.find(query).limit(limit).sort({ firstName: 1 });
     },
 
     trainersCount: async (_, __, { user }) => {
@@ -236,6 +272,34 @@ const resolvers = {
       return await Followup.countDocuments({ gymUuid });
     },
 
+    followupSearchSuggestions: async (_, { search, limit = 10 }, { user }) => {
+      const gymUuid = await getGymUuid(user);
+      if (!search || search.length < 2) return [];
+      
+      // First find members matching the search
+      const matchingMembers = await Member.find({
+        gymUuid,
+        $or: [
+          { firstName: { $regex: search, $options: 'i' } },
+          { lastName: { $regex: search, $options: 'i' } },
+        ],
+      }).select('_id');
+      
+      const memberIds = matchingMembers.map(m => m._id);
+      
+      // Find followups for those members
+      const followups = await Followup.find({
+        gymUuid,
+        member: { $in: memberIds },
+      })
+        .populate('member')
+        .populate('trainer')
+        .limit(limit)
+        .sort({ scheduledDate: -1 });
+      
+      return followups;
+    },
+
     upcomingFollowups: async (_, { days = 7 }, { user }) => {
       const gymUuid = await getGymUuid(user);
       const now = new Date();
@@ -307,6 +371,21 @@ const resolvers = {
     resourcesCount: async (_, __, { user }) => {
       const gymUuid = await getGymUuid(user);
       return await Resource.countDocuments({ gymUuid });
+    },
+
+    resourceSearchSuggestions: async (_, { search, limit = 10 }, { user }) => {
+      const gymUuid = await getGymUuid(user);
+      if (!search || search.length < 2) return [];
+      
+      const query = {
+        gymUuid,
+        $or: [
+          { name: { $regex: search, $options: 'i' } },
+          { description: { $regex: search, $options: 'i' } },
+        ],
+      };
+      
+      return await Resource.find(query).limit(limit).sort({ name: 1 });
     },
 
     // Event Queries
@@ -386,6 +465,21 @@ const resolvers = {
       })
         .populate('trainer')
         .sort({ startDate: 1 });
+    },
+
+    eventSearchSuggestions: async (_, { search, limit = 10 }, { user }) => {
+      const gymUuid = await getGymUuid(user);
+      if (!search || search.length < 2) return [];
+      
+      const query = {
+        gymUuid,
+        $or: [
+          { title: { $regex: search, $options: 'i' } },
+          { description: { $regex: search, $options: 'i' } },
+        ],
+      };
+      
+      return await Event.find(query).populate('trainer').limit(limit).sort({ startDate: -1 });
     },
   },
 

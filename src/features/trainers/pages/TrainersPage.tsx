@@ -12,9 +12,11 @@ import {
   Loader2,
 } from 'lucide-react';
 import { Header } from '../../../components/layout';
-import { Widget, DataTable, Button, Modal, Input, Select } from '../../../components/ui';
+import { Widget, DataTable, Button, Modal, Input, Select, FilterMenu } from '../../../components/ui';
+import type { FilterField } from '../../../components/ui';
+import { TeamSearchSuggestions } from '../../../components/ui/TeamSearchSuggestions';
 import { formatCurrency, getStatusColor, downloadAsCSV } from '../../../lib/utils';
-import { GET_TEAM_MEMBERS, CREATE_TEAM_MEMBER, UPDATE_TEAM_MEMBER, DELETE_TEAM_MEMBER } from '../../../graphql/team';
+import { GET_TEAM_MEMBERS, CREATE_TEAM_MEMBER, UPDATE_TEAM_MEMBER, DELETE_TEAM_MEMBER, SEARCH_TEAM_SUGGESTIONS } from '../../../graphql/team';
 import type { TeamRole } from '../../../types';
 
 interface TeamMemberData {
@@ -100,6 +102,54 @@ export function TrainersPage() {
   const [pageSize, setPageSize] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
 
+  // Filter state
+  const [filters, setFilters] = useState<Record<string, string>>({
+    role: 'all',
+    dayPresent: 'all',
+    status: 'all',
+  });
+
+  // Filter fields configuration
+  const filterFields: FilterField[] = [
+    {
+      key: 'role',
+      label: 'Role',
+      options: [
+        { label: 'All Roles', value: 'all' },
+        { label: 'Trainer', value: 'trainer' },
+        { label: 'Cleaning Staff', value: 'cleaning-staff' },
+        { label: 'Receptionist', value: 'receptionist' },
+        { label: 'Manager', value: 'manager' },
+        { label: 'Maintenance', value: 'maintenance' },
+        { label: 'Security', value: 'security' },
+        { label: 'Other', value: 'other' },
+      ],
+    },
+    {
+      key: 'dayPresent',
+      label: 'Day Present',
+      options: [
+        { label: 'All Days', value: 'all' },
+        { label: 'Monday', value: 'Monday' },
+        { label: 'Tuesday', value: 'Tuesday' },
+        { label: 'Wednesday', value: 'Wednesday' },
+        { label: 'Thursday', value: 'Thursday' },
+        { label: 'Friday', value: 'Friday' },
+        { label: 'Saturday', value: 'Saturday' },
+        { label: 'Sunday', value: 'Sunday' },
+      ],
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      options: [
+        { label: 'All Status', value: 'all' },
+        { label: 'Active', value: 'active' },
+        { label: 'Inactive', value: 'inactive' },
+      ],
+    },
+  ];
+
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -118,7 +168,12 @@ export function TrainersPage() {
 
   const { data, loading, error, refetch } = useQuery(GET_TEAM_MEMBERS, {
     variables: {
-      filter: searchTerm ? { search: searchTerm } : null,
+      filter: {
+        ...(filters.role !== 'all' ? { role: filters.role } : {}),
+        ...(filters.dayPresent !== 'all' ? { dayPresent: filters.dayPresent } : {}),
+        ...(filters.status !== 'all' ? { status: filters.status } : {}),
+        ...(searchTerm ? { search: searchTerm } : {}),
+      },
       pagination: { page: currentPage, limit: pageSize },
     },
     fetchPolicy: 'network-only',
@@ -172,6 +227,7 @@ export function TrainersPage() {
   const handlePageChange = (page: number) => setCurrentPage(page);
   const handlePageSizeChange = (size: number) => { setPageSize(size); setCurrentPage(1); };
   const handleSearchChange = (search: string) => { setSearchTerm(search); setCurrentPage(1); };
+  const handleFilterChange = (newFilters: Record<string, string>) => { setFilters(newFilters); setCurrentPage(1); };
 
   const columns = [
     {
@@ -441,7 +497,13 @@ export function TrainersPage() {
   }
 
   // Empty state - no team members yet
-  if (teamMembers.length === 0) {
+  // Check if any filters are applied
+  const hasActiveFilters = Object.values(filters).some(v => v && v !== 'all') || searchTerm;
+  
+  // Check if this is truly empty (no team members at all) vs filtered results empty
+  const isTrulyEmpty = (stats?.total === 0 || stats?.total === undefined) && !hasActiveFilters;
+
+  if (teamMembers.length === 0 && isTrulyEmpty) {
     return (
       <div>
         <Header
@@ -720,22 +782,35 @@ export function TrainersPage() {
           />
         </div>
 
-        <div className="flex justify-end mb-6">
-          <Button
-            leftIcon={<Plus className="w-4 h-4" />}
-            onClick={() => setShowModal(true)}
-          >
-            Add Team Member
-          </Button>
+        <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-6">
+          <TeamSearchSuggestions
+            placeholder="Search by name or phone..."
+            onSelect={(member) => navigate(`/dashboard/team/${member.id}`)}
+            onSearch={handleSearchChange}
+            className="flex-1 max-w-md"
+          />
+          <div className="flex gap-3 items-center">
+            <FilterMenu
+              fields={filterFields}
+              appliedFilters={filters}
+              onFilterChange={handleFilterChange}
+            />
+            <Button
+              leftIcon={<Plus className="w-4 h-4" />}
+              onClick={() => setShowModal(true)}
+            >
+              Add Team Member
+            </Button>
+          </div>
         </div>
 
         <DataTable
           data={teamMembers}
           columns={columns}
-          searchPlaceholder="Search team members..."
           onDownload={handleDownload}
           onRowClick={handleRowClick}
           emptyMessage="No team members found"
+          hideSearch={true}
           serverSidePagination={true}
           totalItems={totalTeamMembers}
           currentPage={currentPage}

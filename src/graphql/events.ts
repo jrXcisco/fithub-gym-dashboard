@@ -154,3 +154,17 @@ export const DELETE_EVENT = gql`
     deleteEvent(id: $id)
   }
 `;
+
+export const SEARCH_EVENT_SUGGESTIONS = gql`
+  query SearchEventSuggestions($search: String!, $limit: Int) {
+    eventSearchSuggestions(search: $search, limit: $limit) {
+      id
+      title
+      type
+      status
+      startDate
+      endDate
+      location
+    }
+  }
+`;
