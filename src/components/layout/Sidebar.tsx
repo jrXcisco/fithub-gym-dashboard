@@ -1,4 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom';
+import { useState } from 'react';
 import {
   LayoutDashboard,
   Users,
@@ -8,6 +9,8 @@ import {
   PhoneCall,
   LogOut,
   Dumbbell,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useAuthStore } from '../../stores/authStore';
@@ -24,6 +27,7 @@ const navItems = [
 export function Sidebar() {
   const navigate = useNavigate();
   const logout = useAuthStore((state) => state.logout);
+  const [isTeamOpen, setIsTeamOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -44,23 +48,63 @@ export function Sidebar() {
         </div>
       </div>
 
-      <nav className="flex-1 p-4 space-y-1">
+      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
         {navItems.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            className={({ isActive }) =>
-              cn(
-                'flex items-center gap-3 px-4 py-3 rounded-lg transition-colors',
-                isActive
-                  ? 'bg-primary-600 text-white'
-                  : 'text-gray-400 hover:bg-gray-800 hover:text-white'
-              )
-            }
-          >
-            <item.icon className="w-5 h-5" />
-            <span className="font-medium">{item.label}</span>
-          </NavLink>
+          <div key={item.to || item.label}>
+            {item.to ? (
+              <NavLink
+                to={item.to}
+                className={({ isActive }) =>
+                  cn(
+                    'flex items-center gap-3 px-4 py-3 rounded-lg transition-colors',
+                    isActive
+                      ? 'bg-primary-600 text-white'
+                      : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                  )
+                }
+              >
+                <item.icon className="w-5 h-5" />
+                <span className="font-medium">{item.label}</span>
+              </NavLink>
+            ) : (
+              <div className="mb-1">
+                <button 
+                  onClick={() => setIsTeamOpen(!isTeamOpen)}
+                  className="w-full flex items-center justify-between gap-3 px-4 py-3 text-gray-400 hover:bg-gray-800 hover:text-white rounded-lg transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <item.icon className="w-5 h-5" />
+                    <span className="font-medium">{item.label}</span>
+                  </div>
+                  {isTeamOpen ? (
+                    <ChevronDown className="w-4 h-4" />
+                  ) : (
+                    <ChevronRight className="w-4 h-4" />
+                  )}
+                </button>
+                {isTeamOpen && (
+                  <div className="ml-8 space-y-1">
+                  {item.items?.map((subItem) => (
+                    <NavLink
+                      key={subItem.to}
+                      to={subItem.to}
+                      className={({ isActive }) =>
+                        cn(
+                          'block px-4 py-2 text-sm rounded-lg transition-colors',
+                          isActive
+                            ? 'bg-primary-600/20 text-primary-400'
+                            : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                        )
+                      }
+                    >
+                      {subItem.label}
+                    </NavLink>
+                  ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         ))}
       </nav>
 
