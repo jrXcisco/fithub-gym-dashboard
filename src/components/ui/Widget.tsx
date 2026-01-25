@@ -1,7 +1,7 @@
 import { cn } from '../../lib/utils';
 import type { LucideIcon } from 'lucide-react';
 
-interface WidgetProps {
+export interface WidgetProps {
   title: string;
   value: string | number;
   icon: LucideIcon;
@@ -11,6 +11,7 @@ interface WidgetProps {
   };
   color?: 'blue' | 'green' | 'yellow' | 'red' | 'purple';
   className?: string;
+  onClick?: () => void;
 }
 
 const colorStyles = {
@@ -28,11 +29,14 @@ export function Widget({
   trend,
   color = 'blue',
   className,
+  onClick,
 }: WidgetProps) {
   return (
     <div
+      onClick={onClick}
       className={cn(
         'bg-white rounded-xl shadow-sm border border-gray-100 p-6',
+        onClick && 'cursor-pointer hover:shadow-md transition-shadow',
         className
       )}
     >

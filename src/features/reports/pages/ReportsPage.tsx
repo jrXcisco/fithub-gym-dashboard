@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState } from 'react';
 import { useQuery, useLazyQuery } from '@apollo/client';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -15,8 +15,6 @@ import {
   Clock,
   RefreshCw,
   Download,
-  Filter,
-  Search,
   ChevronRight,
   ChevronLeft,
   ChevronsLeft,
@@ -24,7 +22,6 @@ import {
   FileText,
   DollarSign,
   Calendar,
-  Activity,
 } from 'lucide-react';
 import { Header } from '../../../components/layout';
 import { Button, SearchSuggestions } from '../../../components/ui';
@@ -50,14 +47,6 @@ interface ReportCardProps {
 }
 
 function ReportCard({ title, value, subtitle, icon, trend, trendValue, color, onClick }: ReportCardProps) {
-  const colorClasses = {
-    blue: 'bg-blue-50 text-blue-600 border-blue-100',
-    green: 'bg-green-50 text-green-600 border-green-100',
-    yellow: 'bg-yellow-50 text-yellow-600 border-yellow-100',
-    red: 'bg-red-50 text-red-600 border-red-100',
-    purple: 'bg-purple-50 text-purple-600 border-purple-100',
-  };
-
   const iconBgClasses = {
     blue: 'bg-blue-100',
     green: 'bg-green-100',
@@ -183,7 +172,7 @@ export function ReportsPage() {
   const statusFilter = getStatusFilter();
 
   // Main query for paginated data
-  const { data: membersData, loading, error, refetch } = useQuery(GET_MEMBERS, {
+  const { data: membersData, loading } = useQuery(GET_MEMBERS, {
     variables: {
       filter: {
         ...(statusFilter ? { status: statusFilter } : {}),
@@ -220,12 +209,8 @@ export function ReportsPage() {
   const totalMembersCount = serverStats?.total || dataForStats.length;
   const activeMembersCount = serverStats?.active || dataForStats.filter((m: any) => m.status === 'active').length;
   const inactiveMembersCount = serverStats?.inactive || dataForStats.filter((m: any) => m.status === 'inactive').length;
-  const expiredMembersCount = serverStats?.expired || dataForStats.filter((m: any) => m.status === 'expired').length;
-  
   // Filter arrays for display
   const activeMembers = dataForStats.filter((m: any) => m.status === 'active');
-  const inactiveMembers = dataForStats.filter((m: any) => m.status === 'inactive');
-  const expiredMembers = dataForStats.filter((m: any) => m.status === 'expired');
   
   // New members (joined in last 30 days)
   const thirtyDaysAgo = new Date();

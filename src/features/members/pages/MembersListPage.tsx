@@ -187,7 +187,7 @@ export function MembersListPage() {
   });
 
   // Lazy query to fetch all members for download (with current filters, no pagination)
-  const [fetchAllMembers, { loading: downloadLoading }] = useLazyQuery(GET_MEMBERS, {
+  const [fetchAllMembers] = useLazyQuery(GET_MEMBERS, {
     fetchPolicy: 'network-only',
   });
 
