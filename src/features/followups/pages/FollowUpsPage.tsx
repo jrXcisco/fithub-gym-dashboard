@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery, useMutation } from '@apollo/client';
+import { useQuery, useMutation, useLazyQuery } from '@apollo/client';
 import {
   PhoneCall,
   Plus,
@@ -199,6 +199,63 @@ export function FollowUpsPage() {
       alert(err.message);
     },
   });
+
+  // Lazy query to fetch all followups for download (with current filters, no pagination)
+  const [fetchAllFollowups] = useLazyQuery(GET_FOLLOWUPS, {
+    fetchPolicy: 'network-only',
+  });
+
+  const handleDownload = async () => {
+    try {
+      // Fetch all followups with current filters (no pagination limit)
+      const result = await fetchAllFollowups({
+        variables: {
+          filter: {
+            ...(filters.type !== 'all' ? { type: filters.type } : {}),
+            ...(filters.priority !== 'all' ? { priority: filters.priority } : {}),
+            ...(filters.status !== 'all' ? { status: filters.status } : {}),
+            ...(searchTerm ? { search: searchTerm } : {}),
+          },
+          pagination: { page: 1, limit: 10000 },
+        },
+      });
+
+      const allFollowups: FollowupData[] = result.data?.followups?.followups || [];
+      
+      if (allFollowups.length === 0) {
+        alert('No follow-ups to download');
+        return;
+      }
+
+      const exportData = allFollowups.map((f) => ({
+        title: f.title,
+        type: f.type,
+        status: f.status,
+        priority: f.priority,
+        scheduledDate: f.scheduledDate,
+        completedDate: f.completedDate || '',
+        member: f.member ? `${f.member.firstName} ${f.member.lastName}` : '',
+        trainer: f.trainer ? `${f.trainer.firstName} ${f.trainer.lastName}` : '',
+        notes: f.notes || '',
+        outcome: f.outcome || '',
+      }));
+      downloadAsCSV(exportData, `followups_export_${new Date().toISOString().split('T')[0]}`, [
+        { key: 'title', header: 'Title' },
+        { key: 'type', header: 'Type' },
+        { key: 'status', header: 'Status' },
+        { key: 'priority', header: 'Priority' },
+        { key: 'scheduledDate', header: 'Scheduled Date' },
+        { key: 'completedDate', header: 'Completed Date' },
+        { key: 'member', header: 'Member' },
+        { key: 'trainer', header: 'Assigned To' },
+        { key: 'notes', header: 'Notes' },
+        { key: 'outcome', header: 'Outcome' },
+      ]);
+    } catch (err) {
+      console.error('Error downloading followups:', err);
+      alert('Failed to download follow-ups');
+    }
+  };
 
   const followUps: FollowupData[] = data?.followups?.followups || [];
   const totalFollowUps = data?.followups?.total || 0;
@@ -421,26 +478,6 @@ export function FollowUpsPage() {
     });
   };
 
-  const handleDownload = () => {
-    const exportData = followUps.map((f) => ({
-      title: f.title,
-      member: f.member ? `${f.member.firstName} ${f.member.lastName}` : '',
-      type: f.type,
-      priority: f.priority,
-      status: f.status,
-      scheduledDate: f.scheduledDate,
-      notes: f.notes || '',
-    }));
-    downloadAsCSV(exportData, 'followups_export', [
-      { key: 'title', header: 'Title' },
-      { key: 'member', header: 'Member' },
-      { key: 'type', header: 'Type' },
-      { key: 'priority', header: 'Priority' },
-      { key: 'status', header: 'Status' },
-      { key: 'scheduledDate', header: 'Scheduled Date' },
-      { key: 'notes', header: 'Notes' },
-    ]);
-  };
 
   if (loading) {
     return (

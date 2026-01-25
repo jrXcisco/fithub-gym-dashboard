@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery, useMutation } from '@apollo/client';
+import { useQuery, useMutation, useLazyQuery } from '@apollo/client';
 import {
   Users,
   UserCheck,
@@ -184,6 +184,11 @@ export function MembersListPage() {
       console.error('Error deleting member:', err);
       alert(err.message);
     },
+  });
+
+  // Lazy query to fetch all members for download (with current filters, no pagination)
+  const [fetchAllMembers, { loading: downloadLoading }] = useLazyQuery(GET_MEMBERS, {
+    fetchPolicy: 'network-only',
   });
 
   const handleAddMember = async (formData: any) => {
@@ -570,26 +575,51 @@ export function MembersListPage() {
     }
   };
 
-  const handleDownload = () => {
-    const headers = ['First Name', 'Last Name', 'Email', 'Phone', 'Plan', 'Status', 'Start Date', 'End Date'];
-    const rows = members.map((m) => [
-      m.firstName || '',
-      m.lastName || '',
-      m.email || '',
-      m.phone || '',
-      m.membershipType || '',
-      m.status || '',
-      m.membershipStartDate || '',
-      m.membershipEndDate || '',
-    ]);
-    const csv = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'members_export.csv';
-    link.click();
-    URL.revokeObjectURL(url);
+  const handleDownload = async () => {
+    try {
+      // Fetch all members with current filters (no pagination limit)
+      const result = await fetchAllMembers({
+        variables: {
+          filter: {
+            ...(filters.status !== 'all' ? { status: filters.status } : {}),
+            ...(filters.fitnessGoal !== 'all' ? { fitnessGoal: filters.fitnessGoal } : {}),
+            ...(filters.membershipType !== 'all' ? { membershipType: filters.membershipType } : {}),
+            ...(searchTerm ? { search: searchTerm } : {}),
+          },
+          pagination: { page: 1, limit: 10000 }, // Large limit to get all records
+        },
+      });
+
+      const allMembers: MemberData[] = result.data?.members?.members || [];
+      
+      if (allMembers.length === 0) {
+        alert('No members to download');
+        return;
+      }
+
+      const headers = ['First Name', 'Last Name', 'Email', 'Phone', 'Plan', 'Status', 'Start Date', 'End Date'];
+      const rows = allMembers.map((m) => [
+        m.firstName || '',
+        m.lastName || '',
+        m.email || '',
+        m.phone || '',
+        m.membershipType || '',
+        m.status || '',
+        m.membershipStartDate || '',
+        m.membershipEndDate || '',
+      ]);
+      const csv = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `members_export_${new Date().toISOString().split('T')[0]}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Error downloading members:', err);
+      alert('Failed to download members');
+    }
   };
 
   const handleFilterChange = (newFilters: Record<string, string>) => {

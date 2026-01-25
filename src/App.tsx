@@ -8,6 +8,7 @@ import { TrainersPage, TeamDetailPage } from './features/trainers';
 import { FollowUpsPage, FollowupDetailPage } from './features/followups';
 import { EventsPage, EventDetailPage } from './features/events';
 import { ResourcesPage, ResourceDetailPage } from './features/resources';
+import { ReportsPage } from './features/reports';
 import { LoginPage, SignupPage } from './features/auth';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { GymLoader } from './components/ui/GymLoader';
@@ -43,6 +44,7 @@ function App() {
           <Route path="events/:id" element={<EventDetailPage />} />
           <Route path="resources" element={<ResourcesPage />} />
           <Route path="resources/:id" element={<ResourceDetailPage />} />
+          <Route path="reports" element={<ReportsPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

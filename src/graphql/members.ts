@@ -40,6 +40,12 @@ export const GET_MEMBERS = gql`
           status
           dueDate
           lastPaymentDate
+          discount
+          applyTaxes
+          taxRate
+          cgst
+          sgst
+          totalTax
         }
         paymentHistory {
           id
@@ -111,6 +117,12 @@ export const GET_MEMBER = gql`
         status
         dueDate
         lastPaymentDate
+        discount
+        applyTaxes
+        taxRate
+        cgst
+        sgst
+        totalTax
       }
       paymentHistory {
         id
@@ -191,6 +203,12 @@ export const ADD_PAYMENT = gql`
         status
         dueDate
         lastPaymentDate
+        discount
+        applyTaxes
+        taxRate
+        cgst
+        sgst
+        totalTax
       }
       paymentHistory {
         id

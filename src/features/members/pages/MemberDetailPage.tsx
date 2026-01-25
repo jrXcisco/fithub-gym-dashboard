@@ -60,6 +60,12 @@ interface MemberData {
     status?: string;
     dueDate?: string;
     lastPaymentDate?: string;
+    discount?: number;
+    applyTaxes?: boolean;
+    taxRate?: string;
+    cgst?: number;
+    sgst?: number;
+    totalTax?: number;
   };
   paymentHistory?: {
     id?: string;
@@ -472,6 +478,31 @@ export function MemberDetailPage() {
                   <p className="text-sm text-gray-500">Total Amount</p>
                   <p className="font-medium text-lg">{formatCurrency(member.payment?.amount || 0)}</p>
                 </div>
+                {(member.payment?.discount ?? 0) > 0 && (
+                  <div>
+                    <p className="text-sm text-gray-500">Discount</p>
+                    <p className="font-medium text-red-600">-{formatCurrency(member.payment?.discount || 0)}</p>
+                  </div>
+                )}
+                {member.payment?.applyTaxes && (
+                  <>
+                    <div className="bg-gray-50 p-3 rounded-lg">
+                      <p className="text-sm text-gray-500 mb-2">Tax Details ({member.payment?.taxRate || 0}%)</p>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">CGST ({Number(member.payment?.taxRate || 0) / 2}%)</span>
+                        <span>{formatCurrency(member.payment?.cgst || 0)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm mt-1">
+                        <span className="text-gray-600">SGST ({Number(member.payment?.taxRate || 0) / 2}%)</span>
+                        <span>{formatCurrency(member.payment?.sgst || 0)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm font-medium mt-2 pt-2 border-t border-gray-200">
+                        <span>Total Tax</span>
+                        <span>{formatCurrency(member.payment?.totalTax || 0)}</span>
+                      </div>
+                    </div>
+                  </>
+                )}
                 <div>
                   <p className="text-sm text-gray-500">Paid Amount</p>
                   <p className="font-medium text-lg text-green-600">{formatCurrency(member.payment?.paidAmount || 0)}</p>
@@ -555,6 +586,9 @@ export function MemberDetailPage() {
                 amount: member.payment.amount || 0,
                 paidAmount: member.payment.paidAmount || 0,
                 dueDate: member.payment.dueDate ? member.payment.dueDate.split('T')[0] : '',
+                discount: member.payment.discount || 0,
+                applyTaxes: member.payment.applyTaxes || false,
+                taxRate: member.payment.taxRate || '18',
               } : undefined,
               workoutProgram: member.workoutProgram ? {
                 goal: member.workoutProgram.goal as any || 'general-fitness',

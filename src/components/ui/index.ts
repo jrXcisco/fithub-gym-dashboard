@@ -9,5 +9,6 @@ export { DataTable } from './DataTable';
 export { Textarea } from './Textarea';
 export { GymLoader } from './GymLoader';
 export { SearchSuggestions } from './SearchSuggestions';
+export { TeamSearchSuggestions } from './TeamSearchSuggestions';
 export { FilterMenu } from './FilterMenu';
 export type { FilterField, FilterOption, AppliedFilter } from './FilterMenu';

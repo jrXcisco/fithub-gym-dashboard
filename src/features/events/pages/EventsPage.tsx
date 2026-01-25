@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery, useMutation } from '@apollo/client';
+import { useQuery, useMutation, useLazyQuery } from '@apollo/client';
 import {
   Calendar,
   Plus,
@@ -187,6 +187,11 @@ export function EventsPage() {
     },
   });
 
+  // Lazy query to fetch all events for download (with current filters, no pagination)
+  const [fetchAllEvents] = useLazyQuery(GET_EVENTS, {
+    fetchPolicy: 'network-only',
+  });
+
   const events: EventData[] = data?.events?.events || [];
   const totalEvents = data?.events?.total || 0;
   const trainers = trainersData?.trainers?.trainers || [];
@@ -271,24 +276,55 @@ export function EventsPage() {
     }
   };
 
-  const handleDownload = () => {
-    const exportData = events.map((e) => ({
-      ...e,
-      trainerId: undefined,
-      createdAt: undefined,
-      updatedAt: undefined,
-    }));
-    downloadAsCSV(exportData as unknown as Record<string, unknown>[], 'events_export', [
-      { key: 'title', header: 'Title' },
-      { key: 'type', header: 'Type' },
-      { key: 'startDate', header: 'Start Date' },
-      { key: 'endDate', header: 'End Date' },
-      { key: 'location', header: 'Location' },
-      { key: 'maxParticipants', header: 'Max Participants' },
-      { key: 'currentParticipants', header: 'Current Participants' },
-      { key: 'fee', header: 'Fee' },
-      { key: 'status', header: 'Status' },
-    ]);
+  const handleDownload = async () => {
+    try {
+      // Fetch all events with current filters (no pagination limit)
+      const result = await fetchAllEvents({
+        variables: {
+          filter: {
+            ...(filters.status !== 'all' ? { status: filters.status } : {}),
+            ...(filters.type !== 'all' ? { type: filters.type } : {}),
+            ...(searchTerm ? { search: searchTerm } : {}),
+          },
+          pagination: { page: 1, limit: 10000 },
+        },
+      });
+
+      const allEvents: EventData[] = result.data?.events?.events || [];
+      
+      if (allEvents.length === 0) {
+        alert('No events to download');
+        return;
+      }
+
+      const exportData = allEvents.map((e) => ({
+        title: e.title,
+        type: e.type,
+        startDate: e.startDate,
+        endDate: e.endDate,
+        location: e.location || '',
+        maxParticipants: e.maxParticipants,
+        currentParticipants: e.currentParticipants,
+        fee: e.fee,
+        status: e.status,
+        trainer: e.trainer ? `${e.trainer.firstName} ${e.trainer.lastName}` : '',
+      }));
+      downloadAsCSV(exportData as unknown as Record<string, unknown>[], `events_export_${new Date().toISOString().split('T')[0]}`, [
+        { key: 'title', header: 'Title' },
+        { key: 'type', header: 'Type' },
+        { key: 'startDate', header: 'Start Date' },
+        { key: 'endDate', header: 'End Date' },
+        { key: 'location', header: 'Location' },
+        { key: 'maxParticipants', header: 'Max Participants' },
+        { key: 'currentParticipants', header: 'Current Participants' },
+        { key: 'fee', header: 'Fee' },
+        { key: 'status', header: 'Status' },
+        { key: 'trainer', header: 'Trainer' },
+      ]);
+    } catch (err) {
+      console.error('Error downloading events:', err);
+      alert('Failed to download events');
+    }
   };
 
   if (loading) {

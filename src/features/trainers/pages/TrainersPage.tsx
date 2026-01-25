@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery, useMutation } from '@apollo/client';
+import { useQuery, useMutation, useLazyQuery } from '@apollo/client';
 import {
   UserCheck,
   Plus,
@@ -12,11 +12,10 @@ import {
   Loader2,
 } from 'lucide-react';
 import { Header } from '../../../components/layout';
-import { Widget, DataTable, Button, Modal, Input, Select, FilterMenu } from '../../../components/ui';
+import { Widget, DataTable, Button, Modal, Input, Select, FilterMenu, TeamSearchSuggestions } from '../../../components/ui';
 import type { FilterField } from '../../../components/ui';
-import { TeamSearchSuggestions } from '../../../components/ui/TeamSearchSuggestions';
 import { formatCurrency, getStatusColor, downloadAsCSV } from '../../../lib/utils';
-import { GET_TEAM_MEMBERS, CREATE_TEAM_MEMBER, UPDATE_TEAM_MEMBER, DELETE_TEAM_MEMBER, SEARCH_TEAM_SUGGESTIONS } from '../../../graphql/team';
+import { GET_TEAM_MEMBERS, CREATE_TEAM_MEMBER, UPDATE_TEAM_MEMBER, DELETE_TEAM_MEMBER } from '../../../graphql/team';
 import type { TeamRole } from '../../../types';
 
 interface TeamMemberData {
@@ -211,6 +210,11 @@ export function TrainersPage() {
       console.error('Error deleting team member:', err);
       alert(err.message);
     },
+  });
+
+  // Lazy query to fetch all team members for download (with current filters, no pagination)
+  const [fetchAllTeamMembers] = useLazyQuery(GET_TEAM_MEMBERS, {
+    fetchPolicy: 'network-only',
   });
 
   const teamMembers: TeamMemberData[] = data?.trainers?.trainers || [];
@@ -416,29 +420,54 @@ export function TrainersPage() {
     });
   };
 
-  const handleDownload = () => {
-    const exportData = teamMembers.map((t) => ({
-      firstName: t.firstName,
-      lastName: t.lastName,
-      email: t.email,
-      phone: t.phone || '',
-      role: formatRole(t.role),
-      specializations: t.specializations?.join('; ') || '',
-      experience: t.experience || 0,
-      salary: t.salary || 0,
-      status: t.status,
-    }));
-    downloadAsCSV(exportData, 'team_export', [
-      { key: 'firstName', header: 'First Name' },
-      { key: 'lastName', header: 'Last Name' },
-      { key: 'email', header: 'Email' },
-      { key: 'phone', header: 'Phone' },
-      { key: 'role', header: 'Role' },
-      { key: 'specializations', header: 'Specialization' },
-      { key: 'experience', header: 'Experience (Years)' },
-      { key: 'salary', header: 'Salary' },
-      { key: 'status', header: 'Status' },
-    ]);
+  const handleDownload = async () => {
+    try {
+      // Fetch all team members with current filters (no pagination limit)
+      const result = await fetchAllTeamMembers({
+        variables: {
+          filter: {
+            ...(filters.role !== 'all' ? { role: filters.role } : {}),
+            ...(filters.dayPresent !== 'all' ? { dayPresent: filters.dayPresent } : {}),
+            ...(filters.status !== 'all' ? { status: filters.status } : {}),
+            ...(searchTerm ? { search: searchTerm } : {}),
+          },
+          pagination: { page: 1, limit: 10000 },
+        },
+      });
+
+      const allTeamMembers: TeamMemberData[] = result.data?.trainers?.trainers || [];
+      
+      if (allTeamMembers.length === 0) {
+        alert('No team members to download');
+        return;
+      }
+
+      const exportData = allTeamMembers.map((t) => ({
+        firstName: t.firstName,
+        lastName: t.lastName,
+        email: t.email,
+        phone: t.phone || '',
+        role: formatRole(t.role),
+        specializations: t.specializations?.join('; ') || '',
+        experience: t.experience || 0,
+        salary: t.salary || 0,
+        status: t.status,
+      }));
+      downloadAsCSV(exportData, `team_export_${new Date().toISOString().split('T')[0]}`, [
+        { key: 'firstName', header: 'First Name' },
+        { key: 'lastName', header: 'Last Name' },
+        { key: 'email', header: 'Email' },
+        { key: 'phone', header: 'Phone' },
+        { key: 'role', header: 'Role' },
+        { key: 'specializations', header: 'Specialization' },
+        { key: 'experience', header: 'Experience (Years)' },
+        { key: 'salary', header: 'Salary' },
+        { key: 'status', header: 'Status' },
+      ]);
+    } catch (err) {
+      console.error('Error downloading team members:', err);
+      alert('Failed to download team members');
+    }
   };
 
   const toggleSpecialization = (spec: string) => {
@@ -785,7 +814,7 @@ export function TrainersPage() {
         <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-6">
           <TeamSearchSuggestions
             placeholder="Search by name or phone..."
-            onSelect={(member) => navigate(`/dashboard/team/${member.id}`)}
+            onSelect={(member: { id: string }) => navigate(`/dashboard/team/${member.id}`)}
             onSearch={handleSearchChange}
             className="flex-1 max-w-md"
           />

@@ -45,6 +45,11 @@ const workoutGoalOptions = [
   { label: 'Flexibility', value: 'flexibility' },
 ];
 
+const taxOptions = [
+  { label: '5%', value: '5' },
+  { label: '18%', value: '18' },
+];
+
 const planPrices: Record<SubscriptionPlan, number> = {
   monthly: 3000,
   quarterly: 8000,
@@ -75,11 +80,14 @@ export function MemberForm({ initialData, onSubmit, onCancel }: MemberFormProps)
     membershipStartDate: initialData?.membershipStartDate || new Date().toISOString().split('T')[0],
     paymentMethod: initialData?.payment?.method || 'cash',
     paidAmount: initialData?.payment?.paidAmount || 0,
+    discount: initialData?.payment?.discount || 0,
+    applyTaxes: initialData?.payment?.applyTaxes || false,
+    taxRate: initialData?.payment?.taxRate || '18',
     workoutGoal: initialData?.workoutProgram?.goal || 'general-fitness',
     workoutNotes: initialData?.workoutProgram?.notes || '',
   });
 
-  const handleChange = (field: string, value: string | number) => {
+  const handleChange = (field: string, value: string | number | boolean) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     // Clear error when field is updated
     if (errors[field]) {
@@ -168,7 +176,14 @@ export function MemberForm({ initialData, onSubmit, onCancel }: MemberFormProps)
     if (!validateAllSteps()) return;
     
     const plan = formData.subscriptionPlan as SubscriptionPlan;
-    const amount = planPrices[plan];
+    const planAmount = planPrices[plan];
+    const discountAmount = formData.discount || 0;
+    const subtotal = planAmount - discountAmount;
+    const taxRate = formData.applyTaxes ? Number(formData.taxRate) : 0;
+    const totalTaxAmount = formData.applyTaxes ? (subtotal * taxRate) / 100 : 0;
+    const cgstAmount = totalTaxAmount / 2;
+    const sgstAmount = totalTaxAmount / 2;
+    const payableAmount = subtotal + totalTaxAmount;
     const endDate = calculateEndDate(formData.membershipStartDate, plan);
 
     const memberData: Omit<Member, 'id' | 'createdAt' | 'updatedAt'> = {
@@ -193,14 +208,20 @@ export function MemberForm({ initialData, onSubmit, onCancel }: MemberFormProps)
       membershipStartDate: formData.membershipStartDate,
       membershipEndDate: endDate,
       subscriptionPlan: plan,
-      status: formData.paidAmount >= amount ? 'active' : 'pending',
+      status: formData.paidAmount >= payableAmount ? 'active' : 'pending',
       payment: {
         method: formData.paymentMethod as PaymentMethod,
-        status: formData.paidAmount >= amount ? 'paid' : formData.paidAmount > 0 ? 'partial' : 'pending',
-        amount,
+        status: formData.paidAmount >= payableAmount ? 'paid' : formData.paidAmount > 0 ? 'partial' : 'pending',
+        amount: payableAmount,
         paidAmount: formData.paidAmount,
         dueDate: formData.membershipStartDate,
         lastPaymentDate: formData.paidAmount > 0 ? new Date().toISOString().split('T')[0] : undefined,
+        discount: discountAmount,
+        applyTaxes: formData.applyTaxes,
+        taxRate: formData.taxRate,
+        cgst: cgstAmount,
+        sgst: sgstAmount,
+        totalTax: totalTaxAmount,
       },
       workoutProgram: {
         goal: formData.workoutGoal as WorkoutGoal,
@@ -394,38 +415,130 @@ export function MemberForm({ initialData, onSubmit, onCancel }: MemberFormProps)
           </div>
         )}
 
-        {currentStep === 4 && (
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Payment Information</h3>
-            <Select
-              label="Payment Method"
-              options={paymentMethodOptions}
-              value={formData.paymentMethod}
-              onChange={(e) => handleChange('paymentMethod', e.target.value)}
-              required
-              error={errors.paymentMethod}
-            />
-            <Input
-              label="Amount Paid"
-              type="number"
-              value={formData.paidAmount}
-              onChange={(e) => handleChange('paidAmount', Number(e.target.value))}
-              required
-              error={errors.paidAmount}
-            />
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <p className="text-sm text-gray-600">
-                <strong>Total Amount:</strong> ₹{planPrices[formData.subscriptionPlan as SubscriptionPlan].toLocaleString()}
-              </p>
-              <p className="text-sm text-gray-600 mt-1">
-                <strong>Balance:</strong> ₹{(planPrices[formData.subscriptionPlan as SubscriptionPlan] - formData.paidAmount).toLocaleString()}
-              </p>
-              <p className={`text-sm mt-1 font-medium ${formData.paidAmount >= planPrices[formData.subscriptionPlan as SubscriptionPlan] ? 'text-green-600' : 'text-yellow-600'}`}>
-                Status: {formData.paidAmount >= planPrices[formData.subscriptionPlan as SubscriptionPlan] ? 'Fully Paid' : formData.paidAmount > 0 ? 'Partial Payment' : 'Pending'}
-              </p>
+        {currentStep === 4 && (() => {
+          const planAmount = planPrices[formData.subscriptionPlan as SubscriptionPlan];
+          const discountAmount = formData.discount || 0;
+          const subtotal = planAmount - discountAmount;
+          const taxRate = formData.applyTaxes ? Number(formData.taxRate) : 0;
+          const totalTaxAmount = formData.applyTaxes ? (subtotal * taxRate) / 100 : 0;
+          const cgstAmount = totalTaxAmount / 2;
+          const sgstAmount = totalTaxAmount / 2;
+          const payableAmount = subtotal + totalTaxAmount;
+          const balance = payableAmount - formData.paidAmount;
+
+          return (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Payment Information</h3>
+              
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <Select
+                    label="Payment Method"
+                    options={paymentMethodOptions}
+                    value={formData.paymentMethod}
+                    onChange={(e) => handleChange('paymentMethod', e.target.value)}
+                    required
+                    error={errors.paymentMethod}
+                  />
+                  
+                  <Input
+                    label="Discount"
+                    type="number"
+                    value={formData.discount}
+                    onChange={(e) => handleChange('discount', Number(e.target.value))}
+                    placeholder="Enter discount amount"
+                  />
+
+                  <div className="flex items-center gap-3 mt-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.applyTaxes}
+                        onChange={(e) => handleChange('applyTaxes', e.target.checked)}
+                        className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                      />
+                      <span className="text-sm font-medium text-gray-700">Apply Taxes*</span>
+                    </label>
+                    {formData.applyTaxes && (
+                      <Select
+                        options={taxOptions}
+                        value={formData.taxRate}
+                        onChange={(e) => handleChange('taxRate', e.target.value)}
+                        className="w-32"
+                      />
+                    )}
+                  </div>
+
+                  {formData.applyTaxes && (
+                    <div className="bg-gray-50 p-3 rounded-lg mt-2">
+                      <div className="flex justify-between text-sm text-gray-600">
+                        <span>CGST ({Number(formData.taxRate) / 2}%)</span>
+                        <span>₹{cgstAmount.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm text-gray-600 mt-1">
+                        <span>SGST ({Number(formData.taxRate) / 2}%)</span>
+                        <span>₹{sgstAmount.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm font-medium text-gray-700 mt-2 pt-2 border-t border-gray-200">
+                        <span>Total Taxes (₹)</span>
+                        <span>₹{totalTaxAmount.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  <Input
+                    label="Amount Paid"
+                    type="number"
+                    value={formData.paidAmount}
+                    onChange={(e) => handleChange('paidAmount', Number(e.target.value))}
+                    required
+                    error={errors.paidAmount}
+                  />
+                </div>
+
+                <div className="bg-gray-50 p-4 rounded-lg h-fit">
+                  <div className="space-y-3">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Selected Plans Total</span>
+                      <span className="font-medium">₹{planAmount.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Total Discount</span>
+                      <span className="font-medium text-red-600">₹{discountAmount.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Subtotal</span>
+                      <span className="font-medium">₹{subtotal.toLocaleString()}</span>
+                    </div>
+                    {formData.applyTaxes && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-500">Total Taxes</span>
+                        <span className="font-medium">₹{totalTaxAmount.toFixed(2)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-sm pt-2 border-t border-gray-200">
+                      <span className="text-gray-700 font-medium">Payable Amount</span>
+                      <span className="font-bold text-lg">₹{payableAmount.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Amount Paid</span>
+                      <span className="font-medium text-green-600">₹{formData.paidAmount.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between text-sm pt-2 border-t border-gray-200">
+                      <span className="text-gray-700 font-medium">Remaining Amount</span>
+                      <span className={`font-bold ${balance > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                        ₹{balance.toFixed(2)}
+                      </span>
+                    </div>
+                    <p className={`text-sm mt-2 font-medium ${balance <= 0 ? 'text-green-600' : 'text-yellow-600'}`}>
+                      Status: {balance <= 0 ? 'Fully Paid' : formData.paidAmount > 0 ? 'Partial Payment' : 'Pending'}
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {currentStep === 5 && (
           <div className="space-y-4">

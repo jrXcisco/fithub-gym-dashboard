@@ -8,6 +8,7 @@ import {
   PhoneCall,
   LogOut,
   Dumbbell,
+  FileBarChart,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useAuthStore } from '../../stores/authStore';
@@ -19,6 +20,7 @@ const navItems = [
   { to: '/dashboard/follow-ups', icon: PhoneCall, label: 'Follow-ups' },
   { to: '/dashboard/events', icon: Calendar, label: 'Events' },
   { to: '/dashboard/resources', icon: Package, label: 'Resources' },
+  { to: '/dashboard/reports', icon: FileBarChart, label: 'Reports' },
 ];
 
 export function Sidebar() {

@@ -89,6 +89,12 @@ const memberSchema = new mongoose.Schema(
       },
       dueDate: Date,
       lastPaymentDate: Date,
+      discount: { type: Number, default: 0 },
+      applyTaxes: { type: Boolean, default: false },
+      taxRate: { type: String, default: '18' },
+      cgst: { type: Number, default: 0 },
+      sgst: { type: Number, default: 0 },
+      totalTax: { type: Number, default: 0 },
     },
     paymentHistory: [{
       amount: { type: Number, required: true },

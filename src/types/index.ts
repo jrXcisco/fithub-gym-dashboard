@@ -32,6 +32,12 @@ export interface PaymentInfo {
   paidAmount: number;
   dueDate: string;
   lastPaymentDate?: string;
+  discount?: number;
+  applyTaxes?: boolean;
+  taxRate?: string;
+  cgst?: number;
+  sgst?: number;
+  totalTax?: number;
 }
 
 export interface WorkoutProgram {

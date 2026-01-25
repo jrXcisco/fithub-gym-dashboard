@@ -129,18 +129,6 @@ export function TeamSearchSuggestions({
     }
   };
 
-  const getRoleStyle = (role: string) => {
-    const styles: Record<string, string> = {
-      'trainer': 'bg-purple-50 text-purple-700 border-purple-200',
-      'cleaning-staff': 'bg-blue-50 text-blue-700 border-blue-200',
-      'receptionist': 'bg-green-50 text-green-700 border-green-200',
-      'manager': 'bg-yellow-50 text-yellow-700 border-yellow-200',
-      'maintenance': 'bg-orange-50 text-orange-700 border-orange-200',
-      'security': 'bg-red-50 text-red-700 border-red-200',
-    };
-    return styles[role] || 'bg-gray-50 text-gray-700 border-gray-200';
-  };
-
   const formatRole = (role: string) => {
     return role.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
   };

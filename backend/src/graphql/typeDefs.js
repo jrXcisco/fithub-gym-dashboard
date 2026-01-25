@@ -55,6 +55,12 @@ const typeDefs = `#graphql
     status: String
     dueDate: String
     lastPaymentDate: String
+    discount: Float
+    applyTaxes: Boolean
+    taxRate: String
+    cgst: Float
+    sgst: Float
+    totalTax: Float
   }
 
   type WorkoutProgram {
@@ -141,6 +147,12 @@ const typeDefs = `#graphql
     status: String
     dueDate: String
     lastPaymentDate: String
+    discount: Float
+    applyTaxes: Boolean
+    taxRate: String
+    cgst: Float
+    sgst: Float
+    totalTax: Float
   }
 
   input WorkoutProgramInput {

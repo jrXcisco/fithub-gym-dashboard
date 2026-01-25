@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery, useMutation } from '@apollo/client';
+import { useQuery, useMutation, useLazyQuery } from '@apollo/client';
 import {
   Package,
   Plus,
@@ -175,6 +175,11 @@ export function ResourcesPage() {
       console.error('Error deleting resource:', err);
       alert(err.message);
     },
+  });
+
+  // Lazy query to fetch all resources for download (with current filters, no pagination)
+  const [fetchAllResources] = useLazyQuery(GET_RESOURCES, {
+    fetchPolicy: 'network-only',
   });
 
   const resources: ResourceData[] = data?.resources?.resources || [];
@@ -388,29 +393,53 @@ export function ResourcesPage() {
     });
   };
 
-  const handleDownload = () => {
-    const exportData = resources.map((r) => ({
-      name: r.name,
-      category: r.category,
-      quantity: r.quantity,
-      availableQuantity: r.availableQuantity,
-      status: r.status,
-      location: r.location || '',
-      purchasePrice: r.purchasePrice || 0,
-      purchaseDate: r.purchaseDate || '',
-      nextMaintenance: r.maintenanceSchedule?.nextMaintenance || '',
-    }));
-    downloadAsCSV(exportData, 'resources_export', [
-      { key: 'name', header: 'Name' },
-      { key: 'category', header: 'Category' },
-      { key: 'quantity', header: 'Quantity' },
-      { key: 'availableQuantity', header: 'Available' },
-      { key: 'status', header: 'Status' },
-      { key: 'location', header: 'Location' },
-      { key: 'purchasePrice', header: 'Price' },
-      { key: 'purchaseDate', header: 'Purchase Date' },
-      { key: 'nextMaintenance', header: 'Next Maintenance' },
-    ]);
+  const handleDownload = async () => {
+    try {
+      // Fetch all resources with current filters (no pagination limit)
+      const result = await fetchAllResources({
+        variables: {
+          filter: {
+            ...(filters.category !== 'all' ? { category: filters.category } : {}),
+            ...(filters.status !== 'all' ? { status: filters.status } : {}),
+            ...(searchTerm ? { search: searchTerm } : {}),
+          },
+          pagination: { page: 1, limit: 10000 },
+        },
+      });
+
+      const allResources: ResourceData[] = result.data?.resources?.resources || [];
+      
+      if (allResources.length === 0) {
+        alert('No resources to download');
+        return;
+      }
+
+      const exportData = allResources.map((r) => ({
+        name: r.name,
+        category: r.category,
+        quantity: r.quantity,
+        availableQuantity: r.availableQuantity,
+        status: r.status,
+        location: r.location || '',
+        purchasePrice: r.purchasePrice || 0,
+        purchaseDate: r.purchaseDate || '',
+        nextMaintenance: r.maintenanceSchedule?.nextMaintenance || '',
+      }));
+      downloadAsCSV(exportData, `resources_export_${new Date().toISOString().split('T')[0]}`, [
+        { key: 'name', header: 'Name' },
+        { key: 'category', header: 'Category' },
+        { key: 'quantity', header: 'Quantity' },
+        { key: 'availableQuantity', header: 'Available' },
+        { key: 'status', header: 'Status' },
+        { key: 'location', header: 'Location' },
+        { key: 'purchasePrice', header: 'Price' },
+        { key: 'purchaseDate', header: 'Purchase Date' },
+        { key: 'nextMaintenance', header: 'Next Maintenance' },
+      ]);
+    } catch (err) {
+      console.error('Error downloading resources:', err);
+      alert('Failed to download resources');
+    }
   };
 
   if (loading) {
