@@ -1,10 +1,10 @@
 export type MemberStatus = 'active' | 'inactive' | 'expired' | 'pending';
 
-export type SubscriptionPlan = 'monthly' | 'quarterly' | 'half-yearly' | 'yearly';
+export type SubscriptionPlan = 'monthly' | 'quarterly' | 'half-yearly' | 'yearly' | 'custom';
 
 export type WorkoutGoal = 'weight-loss' | 'weight-gain' | 'muscle-building' | 'general-fitness' | 'cardio' | 'flexibility';
 
-export type PaymentMethod = 'cash' | 'card' | 'upi' | 'bank-transfer';
+export type PaymentMethod = 'cash' | 'card' | 'upi' | 'bank-transfer' | 'cash+upi' | 'cash+card' | 'upi+card';
 
 export type PaymentStatus = 'paid' | 'pending' | 'overdue' | 'partial';
 
@@ -27,6 +27,8 @@ export interface PaymentRecord {
 
 export interface PaymentInfo {
   method: PaymentMethod;
+  methods?: PaymentMethod[]; // For combination payments
+  methodAmounts?: Record<string, number>; // Amount per method for split payments
   status: PaymentStatus;
   amount: number;
   paidAmount: number;
@@ -54,7 +56,7 @@ export interface Member {
   lastName: string;
   email: string;
   phone: string;
-  dateOfBirth: string;
+  dateOfBirth?: string;
   gender: 'male' | 'female' | 'other';
   profileImage?: string;
   address: Address;
@@ -66,6 +68,8 @@ export interface Member {
   membershipStartDate: string;
   membershipEndDate: string;
   subscriptionPlan: SubscriptionPlan;
+  customPlanMonths?: number;
+  customPlanAmountPerMonth?: number;
   status: MemberStatus;
   payment: PaymentInfo;
   paymentHistory?: PaymentRecord[];

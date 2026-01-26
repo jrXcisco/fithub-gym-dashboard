@@ -50,6 +50,7 @@ const typeDefs = `#graphql
 
   type Payment {
     method: String
+    methodAmounts: MethodAmounts
     amount: Float
     paidAmount: Float
     status: String
@@ -63,9 +64,16 @@ const typeDefs = `#graphql
     totalTax: Float
   }
 
+  type MethodAmounts {
+    cash: Float
+    card: Float
+    upi: Float
+  }
+
   type WorkoutProgram {
     goal: String
     startDate: String
+    trainerId: ID
     notes: String
   }
 
@@ -80,6 +88,8 @@ const typeDefs = `#graphql
     gender: String
     address: Address
     membershipType: String!
+    customPlanMonths: Int
+    customPlanAmountPerMonth: Float
     membershipStartDate: String!
     membershipEndDate: String
     status: String!
@@ -140,8 +150,15 @@ const typeDefs = `#graphql
     receiptNumber: String
   }
 
+  input MethodAmountsInput {
+    cash: Float
+    card: Float
+    upi: Float
+  }
+
   input PaymentInput {
     method: String
+    methodAmounts: MethodAmountsInput
     amount: Float
     paidAmount: Float
     status: String
@@ -158,6 +175,7 @@ const typeDefs = `#graphql
   input WorkoutProgramInput {
     goal: String
     startDate: String
+    trainerId: ID
     notes: String
   }
 
@@ -170,6 +188,8 @@ const typeDefs = `#graphql
     gender: String
     address: AddressInput
     membershipType: String
+    customPlanMonths: Int
+    customPlanAmountPerMonth: Float
     membershipStartDate: String
     membershipEndDate: String
     status: String
@@ -191,6 +211,8 @@ const typeDefs = `#graphql
     gender: String
     address: AddressInput
     membershipType: String
+    customPlanMonths: Int
+    customPlanAmountPerMonth: Float
     membershipStartDate: String
     membershipEndDate: String
     status: String

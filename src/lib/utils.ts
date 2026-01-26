@@ -6,7 +6,20 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatDate(date: string | Date): string {
-  return new Date(date).toLocaleDateString('en-US', {
+  // Handle timestamp strings (e.g., "1769558400000")
+  let dateObj: Date;
+  if (typeof date === 'string' && /^\d+$/.test(date)) {
+    dateObj = new Date(parseInt(date, 10));
+  } else {
+    dateObj = new Date(date);
+  }
+  
+  // Check if date is valid
+  if (isNaN(dateObj.getTime())) {
+    return 'N/A';
+  }
+  
+  return dateObj.toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'short',
     day: 'numeric',

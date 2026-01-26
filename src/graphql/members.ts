@@ -19,6 +19,8 @@ export const GET_MEMBERS = gql`
           country
         }
         membershipType
+        customPlanMonths
+        customPlanAmountPerMonth
         membershipStartDate
         membershipEndDate
         status
@@ -35,6 +37,11 @@ export const GET_MEMBERS = gql`
         }
         payment {
           method
+          methodAmounts {
+            cash
+            card
+            upi
+          }
           amount
           paidAmount
           status
@@ -58,6 +65,7 @@ export const GET_MEMBERS = gql`
         workoutProgram {
           goal
           startDate
+          trainerId
           notes
         }
         specialRequirements
@@ -96,6 +104,8 @@ export const GET_MEMBER = gql`
         country
       }
       membershipType
+      customPlanMonths
+      customPlanAmountPerMonth
       membershipStartDate
       membershipEndDate
       status
@@ -112,6 +122,11 @@ export const GET_MEMBER = gql`
       }
       payment {
         method
+        methodAmounts {
+          cash
+          card
+          upi
+        }
         amount
         paidAmount
         status
@@ -135,6 +150,7 @@ export const GET_MEMBER = gql`
       workoutProgram {
         goal
         startDate
+        trainerId
         notes
       }
       specialRequirements

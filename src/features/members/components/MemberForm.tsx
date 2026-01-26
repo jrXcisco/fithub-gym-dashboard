@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Input, Select, Stepper, Textarea } from '../../../components/ui';
+import { Button, Input, Select, Stepper, Textarea, TrainerSelect } from '../../../components/ui';
 import type { Member, SubscriptionPlan, WorkoutGoal, PaymentMethod } from '../../../types';
 
 interface MemberFormProps {
@@ -27,6 +27,7 @@ const subscriptionOptions = [
   { label: 'Quarterly - ₹8,000', value: 'quarterly' },
   { label: 'Half-Yearly - ₹15,000', value: 'half-yearly' },
   { label: 'Yearly - ₹25,000', value: 'yearly' },
+  { label: 'Custom Plan', value: 'custom' },
 ];
 
 const paymentMethodOptions = [
@@ -34,6 +35,9 @@ const paymentMethodOptions = [
   { label: 'Card', value: 'card' },
   { label: 'UPI', value: 'upi' },
   { label: 'Bank Transfer', value: 'bank-transfer' },
+  { label: 'Cash + UPI', value: 'cash+upi' },
+  { label: 'Cash + Card', value: 'cash+card' },
+  { label: 'UPI + Card', value: 'upi+card' },
 ];
 
 const workoutGoalOptions = [
@@ -55,12 +59,14 @@ const planPrices: Record<SubscriptionPlan, number> = {
   quarterly: 8000,
   'half-yearly': 15000,
   yearly: 25000,
+  custom: 0,
 };
 
 export function MemberForm({ initialData, onSubmit, onCancel }: MemberFormProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [stepsWithErrors, setStepsWithErrors] = useState<number[]>([]);
+
   const [formData, setFormData] = useState({
     firstName: initialData?.firstName || '',
     lastName: initialData?.lastName || '',
@@ -77,14 +83,18 @@ export function MemberForm({ initialData, onSubmit, onCancel }: MemberFormProps)
     emergencyPhone: initialData?.emergencyContact?.phone || '',
     emergencyRelation: initialData?.emergencyContact?.relation || '',
     subscriptionPlan: initialData?.subscriptionPlan || 'monthly',
+    customPlanMonths: initialData?.customPlanMonths ?? 1,
+    customPlanAmountPerMonth: initialData?.customPlanAmountPerMonth ?? 3000,
     membershipStartDate: initialData?.membershipStartDate || new Date().toISOString().split('T')[0],
     paymentMethod: initialData?.payment?.method || 'cash',
-    paidAmount: initialData?.payment?.paidAmount || 0,
-    discount: initialData?.payment?.discount || 0,
-    applyTaxes: initialData?.payment?.applyTaxes || false,
+    paymentMethodAmounts: initialData?.payment?.methodAmounts ?? {} as Record<string, number>,
+    paidAmount: initialData?.payment?.paidAmount ?? 0,
+    discount: initialData?.payment?.discount ?? 0,
+    applyTaxes: initialData?.payment?.applyTaxes ?? false,
     taxRate: initialData?.payment?.taxRate || '18',
     workoutGoal: initialData?.workoutProgram?.goal || 'general-fitness',
     workoutNotes: initialData?.workoutProgram?.notes || '',
+    trainerId: initialData?.workoutProgram?.trainerId || '',
   });
 
   const handleChange = (field: string, value: string | number | boolean) => {
@@ -107,13 +117,17 @@ export function MemberForm({ initialData, onSubmit, onCancel }: MemberFormProps)
       if (!formData.lastName.trim()) stepErrors.lastName = 'Last name is required';
       if (!formData.email.trim()) stepErrors.email = 'Email is required';
       if (!formData.phone.trim()) stepErrors.phone = 'Phone is required';
-      if (!formData.dateOfBirth) stepErrors.dateOfBirth = 'Date of birth is required';
+      // Date of birth is now optional
       if (!formData.gender) stepErrors.gender = 'Gender is required';
     }
 
     if (step === 3) {
       if (!formData.subscriptionPlan) stepErrors.subscriptionPlan = 'Subscription plan is required';
       if (!formData.membershipStartDate) stepErrors.membershipStartDate = 'Membership start date is required';
+      if (formData.subscriptionPlan === 'custom') {
+        if (!formData.customPlanMonths || formData.customPlanMonths < 1) stepErrors.customPlanMonths = 'Custom months must be at least 1';
+        if (!formData.customPlanAmountPerMonth || formData.customPlanAmountPerMonth < 0) stepErrors.customPlanAmountPerMonth = 'Amount per month is required';
+      }
     }
 
     if (step === 4) {
@@ -153,7 +167,7 @@ export function MemberForm({ initialData, onSubmit, onCancel }: MemberFormProps)
     return true;
   };
 
-  const calculateEndDate = (startDate: string, plan: SubscriptionPlan): string => {
+  const calculateEndDate = (startDate: string, plan: SubscriptionPlan, customMonths?: number): string => {
     const start = new Date(startDate);
     switch (plan) {
       case 'monthly':
@@ -168,15 +182,26 @@ export function MemberForm({ initialData, onSubmit, onCancel }: MemberFormProps)
       case 'yearly':
         start.setFullYear(start.getFullYear() + 1);
         break;
+      case 'custom':
+        start.setMonth(start.getMonth() + (customMonths || 1));
+        break;
     }
     return start.toISOString().split('T')[0];
+  };
+
+  // Helper to get plan amount (handles custom plans)
+  const getPlanAmount = (): number => {
+    if (formData.subscriptionPlan === 'custom') {
+      return (formData.customPlanMonths || 1) * (formData.customPlanAmountPerMonth || 0);
+    }
+    return planPrices[formData.subscriptionPlan as SubscriptionPlan];
   };
 
   const handleSubmit = () => {
     if (!validateAllSteps()) return;
     
     const plan = formData.subscriptionPlan as SubscriptionPlan;
-    const planAmount = planPrices[plan];
+    const planAmount = getPlanAmount();
     const discountAmount = formData.discount || 0;
     const subtotal = planAmount - discountAmount;
     const taxRate = formData.applyTaxes ? Number(formData.taxRate) : 0;
@@ -184,14 +209,14 @@ export function MemberForm({ initialData, onSubmit, onCancel }: MemberFormProps)
     const cgstAmount = totalTaxAmount / 2;
     const sgstAmount = totalTaxAmount / 2;
     const payableAmount = subtotal + totalTaxAmount;
-    const endDate = calculateEndDate(formData.membershipStartDate, plan);
+    const endDate = calculateEndDate(formData.membershipStartDate, plan, formData.customPlanMonths);
 
     const memberData: Omit<Member, 'id' | 'createdAt' | 'updatedAt'> = {
       firstName: formData.firstName,
       lastName: formData.lastName,
       email: formData.email,
       phone: formData.phone,
-      dateOfBirth: formData.dateOfBirth,
+      dateOfBirth: formData.dateOfBirth || undefined,
       gender: formData.gender as 'male' | 'female' | 'other',
       address: {
         street: formData.street,
@@ -208,9 +233,12 @@ export function MemberForm({ initialData, onSubmit, onCancel }: MemberFormProps)
       membershipStartDate: formData.membershipStartDate,
       membershipEndDate: endDate,
       subscriptionPlan: plan,
+      customPlanMonths: plan === 'custom' ? formData.customPlanMonths : undefined,
+      customPlanAmountPerMonth: plan === 'custom' ? formData.customPlanAmountPerMonth : undefined,
       status: formData.paidAmount >= payableAmount ? 'active' : 'pending',
       payment: {
         method: formData.paymentMethod as PaymentMethod,
+        methodAmounts: formData.paymentMethod.includes('+') ? formData.paymentMethodAmounts : undefined,
         status: formData.paidAmount >= payableAmount ? 'paid' : formData.paidAmount > 0 ? 'partial' : 'pending',
         amount: payableAmount,
         paidAmount: formData.paidAmount,
@@ -226,6 +254,7 @@ export function MemberForm({ initialData, onSubmit, onCancel }: MemberFormProps)
       workoutProgram: {
         goal: formData.workoutGoal as WorkoutGoal,
         startDate: formData.membershipStartDate,
+        trainerId: formData.trainerId || undefined,
         notes: formData.workoutNotes,
       },
     };
@@ -312,12 +341,10 @@ export function MemberForm({ initialData, onSubmit, onCancel }: MemberFormProps)
             </div>
             <div className="grid grid-cols-2 gap-4">
               <Input
-                label="Date of Birth"
+                label="Date of Birth (Optional)"
                 type="date"
                 value={formData.dateOfBirth}
                 onChange={(e) => handleChange('dateOfBirth', e.target.value)}
-                required
-                error={errors.dateOfBirth}
               />
               <Select
                 label="Gender"
@@ -396,6 +423,28 @@ export function MemberForm({ initialData, onSubmit, onCancel }: MemberFormProps)
               required
               error={errors.subscriptionPlan}
             />
+            {formData.subscriptionPlan === 'custom' && (
+              <div className="grid grid-cols-2 gap-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <Input
+                  label="Number of Months"
+                  type="number"
+                  min={1}
+                  value={formData.customPlanMonths}
+                  onChange={(e) => handleChange('customPlanMonths', Number(e.target.value))}
+                  required
+                  error={errors.customPlanMonths}
+                />
+                <Input
+                  label="Amount per Month (₹)"
+                  type="number"
+                  min={0}
+                  value={formData.customPlanAmountPerMonth}
+                  onChange={(e) => handleChange('customPlanAmountPerMonth', Number(e.target.value))}
+                  required
+                  error={errors.customPlanAmountPerMonth}
+                />
+              </div>
+            )}
             <Input
               label="Membership Start Date"
               type="date"
@@ -406,17 +455,20 @@ export function MemberForm({ initialData, onSubmit, onCancel }: MemberFormProps)
             />
             <div className="bg-gray-50 p-4 rounded-lg">
               <p className="text-sm text-gray-600">
-                <strong>Plan Amount:</strong> ₹{planPrices[formData.subscriptionPlan as SubscriptionPlan].toLocaleString()}
+                <strong>Plan Amount:</strong> ₹{getPlanAmount().toLocaleString()}
+                {formData.subscriptionPlan === 'custom' && (
+                  <span className="text-gray-500 ml-2">({formData.customPlanMonths} months × ₹{formData.customPlanAmountPerMonth?.toLocaleString()})</span>
+                )}
               </p>
               <p className="text-sm text-gray-600 mt-1">
-                <strong>End Date:</strong> {calculateEndDate(formData.membershipStartDate, formData.subscriptionPlan as SubscriptionPlan)}
+                <strong>End Date:</strong> {calculateEndDate(formData.membershipStartDate, formData.subscriptionPlan as SubscriptionPlan, formData.customPlanMonths)}
               </p>
             </div>
           </div>
         )}
 
         {currentStep === 4 && (() => {
-          const planAmount = planPrices[formData.subscriptionPlan as SubscriptionPlan];
+          const planAmount = getPlanAmount();
           const discountAmount = formData.discount || 0;
           const subtotal = planAmount - discountAmount;
           const taxRate = formData.applyTaxes ? Number(formData.taxRate) : 0;
@@ -441,8 +493,32 @@ export function MemberForm({ initialData, onSubmit, onCancel }: MemberFormProps)
                     error={errors.paymentMethod}
                   />
                   
+                  {formData.paymentMethod.includes('+') && (
+                    <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                      <p className="text-sm font-medium text-blue-800 mb-2">Split Payment Amounts</p>
+                      <div className="grid grid-cols-2 gap-3">
+                        {formData.paymentMethod.split('+').map((method) => (
+                          <Input
+                            key={method}
+                            label={`${method.toUpperCase()} Amount`}
+                            type="number"
+                            value={formData.paymentMethodAmounts[method] || 0}
+                            onChange={(e) => {
+                              const newAmounts = { ...formData.paymentMethodAmounts, [method]: Number(e.target.value) };
+                              setFormData(prev => ({ ...prev, paymentMethodAmounts: newAmounts }));
+                            }}
+                            placeholder={`Amount via ${method}`}
+                          />
+                        ))}
+                      </div>
+                      <p className="text-xs text-blue-600 mt-2">
+                        Total: ₹{Object.values(formData.paymentMethodAmounts).reduce((a, b) => a + (b || 0), 0).toLocaleString()}
+                      </p>
+                    </div>
+                  )}
+
                   <Input
-                    label="Discount"
+                    label="Discount (₹)"
                     type="number"
                     value={formData.discount}
                     onChange={(e) => handleChange('discount', Number(e.target.value))}
@@ -550,6 +626,12 @@ export function MemberForm({ initialData, onSubmit, onCancel }: MemberFormProps)
               onChange={(e) => handleChange('workoutGoal', e.target.value)}
               required
               error={errors.workoutGoal}
+            />
+            <TrainerSelect
+              label="Assign Trainer (Optional)"
+              value={formData.trainerId}
+              onChange={(trainerId) => handleChange('trainerId', trainerId)}
+              placeholder="Search trainer by name..."
             />
             <Textarea
               label="Notes / Special Requirements"

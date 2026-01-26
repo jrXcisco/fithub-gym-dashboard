@@ -10,5 +10,6 @@ export { Textarea } from './Textarea';
 export { GymLoader } from './GymLoader';
 export { SearchSuggestions } from './SearchSuggestions';
 export { TeamSearchSuggestions } from './TeamSearchSuggestions';
+export { TrainerSelect } from './TrainerSelect';
 export { FilterMenu } from './FilterMenu';
 export type { FilterField, FilterOption, AppliedFilter } from './FilterMenu';

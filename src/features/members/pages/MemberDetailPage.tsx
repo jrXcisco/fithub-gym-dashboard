@@ -21,6 +21,7 @@ import { Button, Modal } from '../../../components/ui';
 import { MemberForm } from '../components/MemberForm';
 import { formatDate, formatCurrency, getStatusColor } from '../../../lib/utils';
 import { GET_MEMBER, UPDATE_MEMBER, DELETE_MEMBER, ADD_PAYMENT } from '../../../graphql/members';
+import { GET_TRAINERS } from '../../../graphql/trainers';
 import { Input, Select } from '../../../components/ui';
 
 interface MemberData {
@@ -55,6 +56,11 @@ interface MemberData {
   };
   payment?: {
     method?: string;
+    methodAmounts?: {
+      cash?: number;
+      card?: number;
+      upi?: number;
+    };
     amount?: number;
     paidAmount?: number;
     status?: string;
@@ -78,8 +84,11 @@ interface MemberData {
   workoutProgram?: {
     goal?: string;
     startDate?: string;
+    trainerId?: string;
     notes?: string;
   };
+  customPlanMonths?: number;
+  customPlanAmountPerMonth?: number;
   specialRequirements?: string;
   createdAt: string;
   updatedAt: string;
@@ -104,6 +113,17 @@ export function MemberDetailPage() {
     skip: !id,
     fetchPolicy: 'network-only',
   });
+
+  const { data: trainersData } = useQuery(GET_TRAINERS, {
+    variables: { filter: { status: 'active' } },
+  });
+
+  // Helper to get trainer name by ID
+  const getTrainerName = (trainerId?: string) => {
+    if (!trainerId || !trainersData?.trainers?.trainers) return 'Not Assigned';
+    const trainer = trainersData.trainers.trainers.find((t: any) => t.id === trainerId);
+    return trainer ? `${trainer.firstName} ${trainer.lastName}` : 'Not Assigned';
+  };
 
   const [updateMember] = useMutation(UPDATE_MEMBER, {
     onCompleted: () => {
@@ -184,6 +204,8 @@ export function MemberDetailPage() {
               country: formData.address.country || 'India',
             } : undefined,
             membershipType: formData.subscriptionPlan || formData.membershipType,
+            customPlanMonths: formData.customPlanMonths,
+            customPlanAmountPerMonth: formData.customPlanAmountPerMonth,
             membershipStartDate: formData.membershipStartDate,
             membershipEndDate: formData.membershipEndDate,
             status: formData.status,
@@ -194,13 +216,21 @@ export function MemberDetailPage() {
             } : undefined,
             payment: formData.payment ? {
               method: formData.payment.method,
+              methodAmounts: formData.payment.methodAmounts,
               amount: formData.payment.amount,
               paidAmount: formData.payment.paidAmount,
               status: formData.payment.status,
+              discount: formData.payment.discount,
+              applyTaxes: formData.payment.applyTaxes,
+              taxRate: formData.payment.taxRate,
+              cgst: formData.payment.cgst,
+              sgst: formData.payment.sgst,
+              totalTax: formData.payment.totalTax,
             } : undefined,
             workoutProgram: formData.workoutProgram ? {
               goal: formData.workoutProgram.goal,
               startDate: formData.workoutProgram.startDate,
+              trainerId: formData.workoutProgram.trainerId,
               notes: formData.workoutProgram.notes,
             } : undefined,
           },
@@ -421,6 +451,10 @@ export function MemberDetailPage() {
                     <p className="text-sm text-gray-500">Start Date</p>
                     <p className="font-medium">{member.workoutProgram.startDate ? formatDate(member.workoutProgram.startDate) : 'N/A'}</p>
                   </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Assigned Trainer</p>
+                    <p className="font-medium">{getTrainerName(member.workoutProgram.trainerId)}</p>
+                  </div>
                   {member.workoutProgram.notes && (
                     <div className="col-span-2">
                       <p className="text-sm text-gray-500">Notes</p>
@@ -441,6 +475,11 @@ export function MemberDetailPage() {
                 <div>
                   <p className="text-sm text-gray-500">Plan</p>
                   <p className="font-medium capitalize">{member.membershipType}</p>
+                  {member.membershipType === 'custom' && member.customPlanMonths && (
+                    <p className="text-xs text-gray-400 mt-1">
+                      {member.customPlanMonths} months × ₹{member.customPlanAmountPerMonth?.toLocaleString()}/month
+                    </p>
+                  )}
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Start Date</p>
@@ -557,6 +596,7 @@ export function MemberDetailPage() {
           size="xl"
         >
           <MemberForm
+            key={showEditModal ? 'edit-modal-open' : 'edit-modal-closed'}
             initialData={{
               firstName: member.firstName,
               lastName: member.lastName,
@@ -572,6 +612,8 @@ export function MemberDetailPage() {
                 country: member.address.country || 'India',
               } : undefined,
               subscriptionPlan: member.membershipType as any,
+              customPlanMonths: member.customPlanMonths,
+              customPlanAmountPerMonth: member.customPlanAmountPerMonth,
               membershipStartDate: member.membershipStartDate ? member.membershipStartDate.split('T')[0] : '',
               membershipEndDate: member.membershipEndDate ? member.membershipEndDate.split('T')[0] : '',
               status: member.status as 'active' | 'inactive' | 'expired' | 'pending',
@@ -582,17 +624,23 @@ export function MemberDetailPage() {
               } : undefined,
               payment: member.payment ? {
                 method: member.payment.method as any || 'cash',
+                methodAmounts: member.payment.methodAmounts ? {
+                  ...(member.payment.methodAmounts.cash != null && { cash: member.payment.methodAmounts.cash }),
+                  ...(member.payment.methodAmounts.card != null && { card: member.payment.methodAmounts.card }),
+                  ...(member.payment.methodAmounts.upi != null && { upi: member.payment.methodAmounts.upi }),
+                } : {},
                 status: member.payment.status as any || 'pending',
-                amount: member.payment.amount || 0,
-                paidAmount: member.payment.paidAmount || 0,
+                amount: member.payment.amount ?? 0,
+                paidAmount: member.payment.paidAmount ?? 0,
                 dueDate: member.payment.dueDate ? member.payment.dueDate.split('T')[0] : '',
-                discount: member.payment.discount || 0,
-                applyTaxes: member.payment.applyTaxes || false,
+                discount: member.payment.discount ?? 0,
+                applyTaxes: member.payment.applyTaxes ?? false,
                 taxRate: member.payment.taxRate || '18',
               } : undefined,
               workoutProgram: member.workoutProgram ? {
                 goal: member.workoutProgram.goal as any || 'general-fitness',
                 startDate: member.workoutProgram.startDate ? member.workoutProgram.startDate.split('T')[0] : '',
+                trainerId: member.workoutProgram.trainerId || '',
                 notes: member.workoutProgram.notes || '',
               } : undefined,
             }}

@@ -44,8 +44,14 @@ const memberSchema = new mongoose.Schema(
     },
     membershipType: {
       type: String,
-      enum: ['basic', 'standard', 'premium', 'vip', 'monthly', 'quarterly', 'half-yearly', 'yearly'],
+      enum: ['basic', 'standard', 'premium', 'vip', 'monthly', 'quarterly', 'half-yearly', 'yearly', 'custom'],
       default: 'basic',
+    },
+    customPlanMonths: {
+      type: Number,
+    },
+    customPlanAmountPerMonth: {
+      type: Number,
     },
     membershipStartDate: {
       type: Date,
@@ -77,8 +83,13 @@ const memberSchema = new mongoose.Schema(
     payment: {
       method: {
         type: String,
-        enum: ['cash', 'card', 'upi', 'bank-transfer'],
+        enum: ['cash', 'card', 'upi', 'bank-transfer', 'cash+upi', 'cash+card', 'upi+card'],
         default: 'cash',
+      },
+      methodAmounts: {
+        cash: Number,
+        card: Number,
+        upi: Number,
       },
       amount: Number,
       paidAmount: { type: Number, default: 0 },
@@ -100,7 +111,7 @@ const memberSchema = new mongoose.Schema(
       amount: { type: Number, required: true },
       method: {
         type: String,
-        enum: ['cash', 'card', 'upi', 'bank-transfer'],
+        enum: ['cash', 'card', 'upi', 'bank-transfer', 'cash+upi', 'cash+card', 'upi+card'],
         required: true,
       },
       date: { type: Date, default: Date.now },
@@ -113,6 +124,10 @@ const memberSchema = new mongoose.Schema(
         enum: ['weight-loss', 'weight-gain', 'muscle-building', 'general-fitness', 'cardio', 'flexibility'],
       },
       startDate: Date,
+      trainerId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Trainer',
+      },
       notes: String,
     },
     specialRequirements: {

@@ -10,24 +10,20 @@ export const GET_TRAINERS = gql`
         lastName
         email
         phone
+        role
         specializations
         certifications
         experience
         bio
-        hourlyRate
+        salary
+        joiningDate
         availability {
-          monday { start end }
-          tuesday { start end }
-          wednesday { start end }
-          thursday { start end }
-          friday { start end }
-          saturday { start end }
-          sunday { start end }
+          days
+          startTime
+          endTime
         }
         status
         profileImage
-        rating
-        totalClients
         createdAt
         updatedAt
       }
@@ -48,24 +44,20 @@ export const GET_TRAINER = gql`
       lastName
       email
       phone
+      role
       specializations
       certifications
       experience
       bio
-      hourlyRate
+      salary
+      joiningDate
       availability {
-        monday { start end }
-        tuesday { start end }
-        wednesday { start end }
-        thursday { start end }
-        friday { start end }
-        saturday { start end }
-        sunday { start end }
+        days
+        startTime
+        endTime
       }
       status
       profileImage
-      rating
-      totalClients
       createdAt
       updatedAt
     }
