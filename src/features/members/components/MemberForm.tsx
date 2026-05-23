@@ -89,6 +89,7 @@ export function MemberForm({ initialData, onSubmit, onCancel }: MemberFormProps)
     paymentMethod: initialData?.payment?.method || 'cash',
     paymentMethodAmounts: initialData?.payment?.methodAmounts ?? {} as Record<string, number>,
     paidAmount: initialData?.payment?.paidAmount ?? 0,
+    nextDueDate: initialData?.payment?.nextDueDate || '',
     discount: initialData?.payment?.discount ?? 0,
     applyTaxes: initialData?.payment?.applyTaxes ?? false,
     taxRate: initialData?.payment?.taxRate || '18',
@@ -243,6 +244,7 @@ export function MemberForm({ initialData, onSubmit, onCancel }: MemberFormProps)
         amount: payableAmount,
         paidAmount: formData.paidAmount,
         dueDate: formData.membershipStartDate,
+        nextDueDate: formData.paidAmount > 0 && formData.paidAmount < payableAmount ? formData.nextDueDate || undefined : undefined,
         lastPaymentDate: formData.paidAmount > 0 ? new Date().toISOString().split('T')[0] : undefined,
         discount: discountAmount,
         applyTaxes: formData.applyTaxes,
@@ -570,6 +572,16 @@ export function MemberForm({ initialData, onSubmit, onCancel }: MemberFormProps)
                     required
                     error={errors.paidAmount}
                   />
+
+                  {(formData.paidAmount > 0 && formData.paidAmount < payableAmount) || formData.nextDueDate ? (
+                    <Input
+                      label="Next Due Date"
+                      type="date"
+                      value={formData.nextDueDate}
+                      onChange={(e) => handleChange('nextDueDate', e.target.value)}
+                      error={errors.nextDueDate}
+                    />
+                  ) : null}
                 </div>
 
                 <div className="bg-gray-50 p-4 rounded-lg h-fit">

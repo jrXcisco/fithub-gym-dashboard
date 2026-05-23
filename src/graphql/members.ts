@@ -46,6 +46,7 @@ export const GET_MEMBERS = gql`
           paidAmount
           status
           dueDate
+          nextDueDate
           lastPaymentDate
           discount
           applyTaxes
@@ -131,6 +132,7 @@ export const GET_MEMBER = gql`
         paidAmount
         status
         dueDate
+        nextDueDate
         lastPaymentDate
         discount
         applyTaxes
@@ -218,6 +220,7 @@ export const ADD_PAYMENT = gql`
         paidAmount
         status
         dueDate
+        nextDueDate
         lastPaymentDate
         discount
         applyTaxes

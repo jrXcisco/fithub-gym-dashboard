@@ -45,16 +45,25 @@ interface Address {
 
 interface Payment {
   method?: string;
+  methodAmounts?: Record<string, number>;
   amount?: number;
   paidAmount?: number;
   status?: string;
   dueDate?: string;
+  nextDueDate?: string;
   lastPaymentDate?: string;
+  discount?: number;
+  applyTaxes?: boolean;
+  taxRate?: string;
+  cgst?: number;
+  sgst?: number;
+  totalTax?: number;
 }
 
 interface WorkoutProgram {
   goal?: string;
   startDate?: string;
+  trainerId?: string;
   notes?: string;
 }
 
@@ -68,6 +77,8 @@ interface MemberData {
   gender?: string;
   address?: Address;
   membershipType: string;
+  customPlanMonths?: number;
+  customPlanAmountPerMonth?: number;
   membershipStartDate: string;
   membershipEndDate?: string;
   status: string;
@@ -227,6 +238,7 @@ export function MembersListPage() {
               paidAmount: formData.payment.paidAmount,
               status: formData.payment.status,
               dueDate: formData.payment.dueDate,
+              nextDueDate: formData.payment.nextDueDate,
               lastPaymentDate: formData.payment.lastPaymentDate,
               discount: formData.payment.discount,
               applyTaxes: formData.payment.applyTaxes,
@@ -235,6 +247,7 @@ export function MembersListPage() {
               sgst: formData.payment.sgst,
               totalTax: formData.payment.totalTax,
             } : undefined,
+            assignedTrainer: formData.workoutProgram?.trainerId || undefined,
             workoutProgram: formData.workoutProgram ? {
               goal: formData.workoutProgram.goal,
               startDate: formData.workoutProgram.startDate,
@@ -291,6 +304,7 @@ export function MembersListPage() {
               paidAmount: formData.payment.paidAmount,
               status: formData.payment.status,
               dueDate: formData.payment.dueDate,
+              nextDueDate: formData.payment.nextDueDate,
               lastPaymentDate: formData.payment.lastPaymentDate,
               discount: formData.payment.discount,
               applyTaxes: formData.payment.applyTaxes,
@@ -299,6 +313,7 @@ export function MembersListPage() {
               sgst: formData.payment.sgst,
               totalTax: formData.payment.totalTax,
             } : undefined,
+            assignedTrainer: formData.workoutProgram?.trainerId || undefined,
             workoutProgram: formData.workoutProgram ? {
               goal: formData.workoutProgram.goal,
               startDate: formData.workoutProgram.startDate,
@@ -322,6 +337,12 @@ export function MembersListPage() {
     } catch (err) {
       console.error('Error in handleDeleteMember:', err);
     }
+  };
+
+  const parseToDateString = (val?: string | null): string => {
+    if (!val) return '';
+    const d = new Date(isNaN(Number(val)) ? val : Number(val));
+    return isNaN(d.getTime()) ? '' : d.toISOString().split('T')[0];
   };
 
   const openEditModal = (member: MemberData, e: React.MouseEvent) => {
@@ -769,7 +790,7 @@ export function MembersListPage() {
                 lastName: selectedMember.lastName,
                 email: selectedMember.email,
                 phone: selectedMember.phone,
-                dateOfBirth: selectedMember.dateOfBirth ? selectedMember.dateOfBirth.split('T')[0] : '',
+                dateOfBirth: parseToDateString(selectedMember.dateOfBirth),
                 gender: (selectedMember.gender as 'male' | 'female' | 'other') || 'male',
                 address: selectedMember.address ? {
                   street: selectedMember.address.street || '',
@@ -779,8 +800,10 @@ export function MembersListPage() {
                   country: selectedMember.address.country || 'India',
                 } : undefined,
                 subscriptionPlan: selectedMember.membershipType as any,
-                membershipStartDate: selectedMember.membershipStartDate ? selectedMember.membershipStartDate.split('T')[0] : '',
-                membershipEndDate: selectedMember.membershipEndDate ? selectedMember.membershipEndDate.split('T')[0] : '',
+                customPlanMonths: selectedMember.customPlanMonths,
+                customPlanAmountPerMonth: selectedMember.customPlanAmountPerMonth,
+                membershipStartDate: parseToDateString(selectedMember.membershipStartDate),
+                membershipEndDate: parseToDateString(selectedMember.membershipEndDate),
                 status: selectedMember.status as MemberStatus,
                 emergencyContact: selectedMember.emergencyContact ? {
                   name: selectedMember.emergencyContact.name || '',
@@ -789,15 +812,24 @@ export function MembersListPage() {
                 } : undefined,
                 payment: selectedMember.payment ? {
                   method: (selectedMember.payment.method as PaymentMethod) || 'cash',
+                  methodAmounts: selectedMember.payment.methodAmounts,
                   status: (selectedMember.payment.status as PaymentStatus) || 'pending',
                   amount: selectedMember.payment.amount || 0,
                   paidAmount: selectedMember.payment.paidAmount || 0,
-                  dueDate: selectedMember.payment.dueDate ? selectedMember.payment.dueDate.split('T')[0] : '',
-                  lastPaymentDate: selectedMember.payment.lastPaymentDate ? selectedMember.payment.lastPaymentDate.split('T')[0] : undefined,
+                  dueDate: parseToDateString(selectedMember.payment.dueDate),
+                  nextDueDate: parseToDateString(selectedMember.payment.nextDueDate) || undefined,
+                  lastPaymentDate: parseToDateString(selectedMember.payment.lastPaymentDate) || undefined,
+                  discount: selectedMember.payment.discount ?? 0,
+                  applyTaxes: selectedMember.payment.applyTaxes ?? false,
+                  taxRate: selectedMember.payment.taxRate || '18',
+                  cgst: selectedMember.payment.cgst ?? 0,
+                  sgst: selectedMember.payment.sgst ?? 0,
+                  totalTax: selectedMember.payment.totalTax ?? 0,
                 } : undefined,
                 workoutProgram: selectedMember.workoutProgram ? {
                   goal: (selectedMember.workoutProgram.goal as WorkoutGoal) || 'general-fitness',
-                  startDate: selectedMember.workoutProgram.startDate ? selectedMember.workoutProgram.startDate.split('T')[0] : '',
+                  startDate: parseToDateString(selectedMember.workoutProgram.startDate),
+                  trainerId: selectedMember.workoutProgram.trainerId || '',
                   notes: selectedMember.workoutProgram.notes || '',
                 } : undefined,
               }}

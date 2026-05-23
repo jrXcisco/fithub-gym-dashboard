@@ -33,6 +33,7 @@ export interface PaymentInfo {
   amount: number;
   paidAmount: number;
   dueDate: string;
+  nextDueDate?: string;
   lastPaymentDate?: string;
   discount?: number;
   applyTaxes?: boolean;

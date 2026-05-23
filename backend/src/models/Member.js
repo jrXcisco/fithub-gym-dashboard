@@ -99,6 +99,7 @@ const memberSchema = new mongoose.Schema(
         default: 'pending',
       },
       dueDate: Date,
+      nextDueDate: Date,
       lastPaymentDate: Date,
       discount: { type: Number, default: 0 },
       applyTaxes: { type: Boolean, default: false },

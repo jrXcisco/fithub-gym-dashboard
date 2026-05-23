@@ -55,6 +55,7 @@ const typeDefs = `#graphql
     paidAmount: Float
     status: String
     dueDate: String
+    nextDueDate: String
     lastPaymentDate: String
     discount: Float
     applyTaxes: Boolean
@@ -163,6 +164,7 @@ const typeDefs = `#graphql
     paidAmount: Float
     status: String
     dueDate: String
+    nextDueDate: String
     lastPaymentDate: String
     discount: Float
     applyTaxes: Boolean
